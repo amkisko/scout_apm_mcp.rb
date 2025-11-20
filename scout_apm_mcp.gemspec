@@ -21,8 +21,8 @@ Gem::Specification.new do |spec|
   spec.executables = ["scout_apm_mcp"]
   spec.require_paths = ["lib"]
 
-  # Enforce Ruby >= 3.0 for modern Ruby features and security
-  spec.required_ruby_version = ">= 3.0"
+  # Enforce Ruby >= 3.1 for modern Ruby features and security
+  spec.required_ruby_version = ">= 3.1"
 
   # Comprehensive metadata following RubyGems best practices
   spec.metadata = {

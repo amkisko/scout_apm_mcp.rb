@@ -12,7 +12,7 @@ Sponsored by [Kisko Labs](https://www.kiskolabs.com).
 
 ## Requirements
 
-- **Ruby 3.0 or higher** (Ruby 2.7 and earlier are not supported)
+- **Ruby 3.1 or higher** (Ruby 3.0 and earlier are not supported)
 
 ## Quick Start
 
