@@ -1,0 +1,33 @@
+module ScoutApmMcp
+  VERSION: String
+
+  module Helpers
+    def self.get_api_key: (?api_key: String?, ?op_vault: String, ?op_item: String, ?op_field: String) -> String
+    def self.parse_scout_url: (String url) -> Hash[Symbol, untyped]
+    def self.decode_endpoint_id: (String endpoint_id) -> String
+  end
+
+  class Client
+    def initialize: (api_key: String, ?api_base: String) -> void
+    def build_http_client: (URI uri) -> Net::HTTP
+
+    def list_apps: () -> Hash[String, untyped]
+    def get_app: (Integer app_id) -> Hash[String, untyped]
+    def list_metrics: (Integer app_id) -> Hash[String, untyped]
+    def get_metric: (Integer app_id, String metric_type, ?from: String?, ?to: String?) -> Hash[String, untyped]
+    def list_endpoints: (Integer app_id, ?from: String?, ?to: String?) -> Hash[String, untyped]
+    def get_endpoint: (Integer app_id, String endpoint_id) -> Hash[String, untyped]
+    def get_endpoint_metrics: (Integer app_id, String endpoint_id, String metric_type, ?from: String?, ?to: String?) -> Hash[String, untyped]
+    def list_endpoint_traces: (Integer app_id, String endpoint_id, ?from: String?, ?to: String?) -> Hash[String, untyped]
+    def fetch_trace: (Integer app_id, Integer trace_id) -> Hash[String, untyped]
+    def list_error_groups: (Integer app_id, ?from: String?, ?to: String?, ?endpoint: String?) -> Hash[String, untyped]
+    def get_error_group: (Integer app_id, Integer error_id) -> Hash[String, untyped]
+    def get_error_group_errors: (Integer app_id, Integer error_id) -> Hash[String, untyped]
+    def get_all_insights: (Integer app_id, ?limit: Integer?) -> Hash[String, untyped]
+    def get_insight_by_type: (Integer app_id, String insight_type, ?limit: Integer?) -> Hash[String, untyped]
+    def get_insights_history: (Integer app_id, ?from: String?, ?to: String?, ?limit: Integer?, ?pagination_cursor: Integer?, ?pagination_direction: String?, ?pagination_page: Integer?) -> Hash[String, untyped]
+    def get_insights_history_by_type: (Integer app_id, String insight_type, ?from: String?, ?to: String?, ?limit: Integer?, ?pagination_cursor: Integer?, ?pagination_direction: String?, ?pagination_page: Integer?) -> Hash[String, untyped]
+    def fetch_openapi_schema: () -> Hash[Symbol, untyped]
+  end
+end
+
