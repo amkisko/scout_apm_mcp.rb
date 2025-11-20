@@ -14,8 +14,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - ruby_version: "3.0"
-          - ruby_version: "3.4"
+          - gemfile: ruby30
+            ruby_version: "3.0"
+          - gemfile: ruby34
+            ruby_version: "3.4"
+    
+    env:
+      BUNDLE_GEMFILE: ${{ github.workspace }}/gemfiles/${{ matrix.gemfile }}.gemfile
     
     steps:
     - uses: actions/checkout@v5
