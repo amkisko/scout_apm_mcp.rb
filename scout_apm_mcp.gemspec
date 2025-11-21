@@ -34,7 +34,7 @@ Gem::Specification.new do |spec|
     "rubygems_mfa_required" => "true"
   }
 
-  spec.add_runtime_dependency "fast-mcp", "~> 0.1"
+  spec.add_runtime_dependency "fast-mcp", ">= 0.1", "< 2.0"
   spec.add_runtime_dependency "base64", "~> 0.3"
   spec.add_runtime_dependency "rack", "~> 2.2", ">= 2.2.0"
   spec.add_runtime_dependency "opdotenv", "~> 1.0"
