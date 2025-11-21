@@ -234,6 +234,7 @@ RSpec.describe ScoutApmMcp::Helpers do
       result = described_class.parse_scout_url(url)
 
       expect(result[:app_id]).to eq(123)
+      expect(result[:url_type]).to eq(:trace)
       expect(result[:endpoint_id]).to eq(endpoint_id)
       expect(result[:trace_id]).to eq(456)
       expect(result[:decoded_endpoint]).to eq("Controller/Test/POST/TestController/test_action")
@@ -262,13 +263,66 @@ RSpec.describe ScoutApmMcp::Helpers do
       expect(result[:trace_id]).to be_nil
     end
 
-    it "uses fallback path extraction when indices are not found" do
-      url = "https://scoutapm.com/apps/123/endpoints/abc/trace/456"
+    it "parses a ScoutAPM endpoint URL correctly" do
+      endpoint_id = Base64.urlsafe_encode64("Controller/Test/POST/TestController/test_action")
+      url = "https://scoutapm.com/apps/123/endpoints/#{endpoint_id}"
       result = described_class.parse_scout_url(url)
 
       expect(result[:app_id]).to eq(123)
-      expect(result[:endpoint_id]).to eq("abc")
-      expect(result[:trace_id]).to eq(456)
+      expect(result[:url_type]).to eq(:endpoint)
+      expect(result[:endpoint_id]).to eq(endpoint_id)
+      expect(result[:decoded_endpoint]).to eq("Controller/Test/POST/TestController/test_action")
+    end
+
+    it "parses a ScoutAPM error group URL correctly" do
+      url = "https://scoutapm.com/apps/123/error_groups/789"
+      result = described_class.parse_scout_url(url)
+
+      expect(result[:app_id]).to eq(123)
+      expect(result[:url_type]).to eq(:error_group)
+      expect(result[:error_id]).to eq(789)
+    end
+
+    it "parses a ScoutAPM insights URL correctly" do
+      url = "https://scoutapm.com/apps/123/insights"
+      result = described_class.parse_scout_url(url)
+
+      expect(result[:app_id]).to eq(123)
+      expect(result[:url_type]).to eq(:insight)
+      expect(result[:insight_type]).to be_nil
+    end
+
+    it "parses a ScoutAPM insights URL with type correctly" do
+      url = "https://scoutapm.com/apps/123/insights/n_plus_one"
+      result = described_class.parse_scout_url(url)
+
+      expect(result[:app_id]).to eq(123)
+      expect(result[:url_type]).to eq(:insight)
+      expect(result[:insight_type]).to eq("n_plus_one")
+    end
+
+    it "parses a ScoutAPM app URL correctly" do
+      url = "https://scoutapm.com/apps/123"
+      result = described_class.parse_scout_url(url)
+
+      expect(result[:app_id]).to eq(123)
+      expect(result[:url_type]).to eq(:app)
+    end
+
+    it "parses unknown URL types correctly" do
+      url = "https://scoutapm.com/apps/123/unknown/path"
+      result = described_class.parse_scout_url(url)
+
+      expect(result[:app_id]).to eq(123)
+      expect(result[:url_type]).to eq(:unknown)
+    end
+
+    it "handles URLs without apps in path" do
+      url = "https://scoutapm.com/some/other/path"
+      result = described_class.parse_scout_url(url)
+
+      expect(result[:app_id]).to be_nil
+      expect(result[:url_type]).to be_nil
     end
   end
 
@@ -305,6 +359,32 @@ RSpec.describe ScoutApmMcp::Helpers do
 
       decoded = described_class.decode_endpoint_id(invalid)
       expect(decoded).to eq(invalid)
+      expect(decoded.encoding).to eq(Encoding::UTF_8)
+    end
+
+    it "falls back to standard base64 when URL-safe decode produces invalid UTF-8" do
+      # Create a base64 string that will decode to invalid UTF-8 with URL-safe decode
+      # but valid UTF-8 with standard decode
+      endpoint = "test-endpoint"
+      # Use standard base64 encoding (not URL-safe)
+      encoded = Base64.strict_encode64(endpoint)
+      # Mock urlsafe_decode64 to return invalid UTF-8
+      allow(Base64).to receive(:urlsafe_decode64).with(encoded).and_return("\xFF\xFE".force_encoding(Encoding::BINARY))
+      allow(Base64).to receive(:decode64).with(encoded).and_return(endpoint)
+
+      decoded = described_class.decode_endpoint_id(encoded)
+      expect(decoded).to eq(endpoint)
+      expect(decoded.encoding).to eq(Encoding::UTF_8)
+    end
+
+    it "returns original string when both decodings produce invalid UTF-8" do
+      endpoint_id = "test-endpoint-id"
+      # Mock both decodings to return invalid UTF-8
+      allow(Base64).to receive(:urlsafe_decode64).with(endpoint_id).and_return("\xFF\xFE".force_encoding(Encoding::BINARY))
+      allow(Base64).to receive(:decode64).with(endpoint_id).and_return("\xFF\xFE".force_encoding(Encoding::BINARY))
+
+      decoded = described_class.decode_endpoint_id(endpoint_id)
+      expect(decoded).to eq(endpoint_id)
       expect(decoded.encoding).to eq(Encoding::UTF_8)
     end
   end

@@ -63,30 +63,55 @@ module ScoutApmMcp
             "or provide OP_ENV_ENTRY_PATH, or op_vault and op_item parameters for 1Password integration"
     end
 
-    # Parse a ScoutAPM trace URL and extract app_id, endpoint_id, and trace_id
+    # Parse a ScoutAPM URL and extract resource information
     #
-    # @param url [String] Full ScoutAPM trace URL
-    # @return [Hash] Hash containing :app_id, :endpoint_id, :trace_id, :query_params, and :decoded_endpoint
+    # @param url [String] Full ScoutAPM URL
+    # @return [Hash] Hash containing resource type and extracted IDs
+    #   Possible keys: :url_type, :app_id, :endpoint_id, :trace_id, :error_id, :insight_type,
+    #   :query_params, :decoded_endpoint
     def self.parse_scout_url(url)
       uri = URI.parse(url)
       path_parts = uri.path.split("/").reject(&:empty?)
 
-      # Extract from URL: /apps/{app_id}/endpoints/{endpoint_id}/trace/{trace_id}
-      app_index = path_parts.index("apps")
-      endpoints_index = path_parts.index("endpoints")
-      trace_index = path_parts.index("trace")
-
       result = {}
+      app_index = path_parts.index("apps")
 
-      if app_index && endpoints_index && trace_index
-        result[:app_id] = path_parts[app_index + 1].to_i
-        result[:endpoint_id] = path_parts[endpoints_index + 1]
-        result[:trace_id] = path_parts[trace_index + 1].to_i
+      return result unless app_index
+
+      result[:app_id] = path_parts[app_index + 1].to_i
+
+      # Detect URL type and extract IDs
+      # Pattern: /apps/{app_id}/endpoints/{endpoint_id}/trace/{trace_id}
+      if path_parts.include?("trace")
+        result[:url_type] = :trace
+        endpoints_index = path_parts.index("endpoints")
+        trace_index = path_parts.index("trace")
+        if endpoints_index && trace_index
+          result[:endpoint_id] = path_parts[endpoints_index + 1]
+          result[:trace_id] = path_parts[trace_index + 1].to_i
+        end
+      # Pattern: /apps/{app_id}/endpoints/{endpoint_id}
+      elsif path_parts.include?("endpoints")
+        result[:url_type] = :endpoint
+        endpoints_index = path_parts.index("endpoints")
+        result[:endpoint_id] = path_parts[endpoints_index + 1] if endpoints_index
+      # Pattern: /apps/{app_id}/error_groups/{error_id}
+      elsif path_parts.include?("error_groups")
+        result[:url_type] = :error_group
+        error_groups_index = path_parts.index("error_groups")
+        result[:error_id] = path_parts[error_groups_index + 1].to_i if error_groups_index
+      # Pattern: /apps/{app_id}/insights or /apps/{app_id}/insights/{insight_type}
+      elsif path_parts.include?("insights")
+        result[:url_type] = :insight
+        insights_index = path_parts.index("insights")
+        if insights_index && path_parts.length > insights_index + 1
+          result[:insight_type] = path_parts[insights_index + 1]
+        end
+      # Pattern: /apps/{app_id}
+      elsif path_parts.length == 2 && path_parts[0] == "apps"
+        result[:url_type] = :app
       else
-        # Fallback: try to extract by position
-        result[:app_id] = path_parts[1].to_i if path_parts[0] == "apps"
-        result[:endpoint_id] = path_parts[3] if path_parts[2] == "endpoints"
-        result[:trace_id] = path_parts[5].to_i if path_parts[4] == "trace"
+        result[:url_type] = :unknown
       end
 
       # Parse query parameters

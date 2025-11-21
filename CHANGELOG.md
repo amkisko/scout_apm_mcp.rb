@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## 0.1.2 (2025-11-21)
+
+- Enhanced SSL certificate handling with support for `SSL_CERT_FILE` environment variable and automatic fallback to system certificates
+- Improved error handling for SSL verification failures with clearer error messages
+- Extended `Helpers.parse_scout_url` to support parsing multiple URL types (endpoints, error_groups, insights, apps) beyond just traces
+- Added `FetchScoutURLTool` MCP tool for automatically detecting and fetching data from any ScoutAPM URL
+- Fixed MCP error handling to ensure error responses always have valid IDs for strict MCP client validation
+- Improved URL parsing to return `url_type` field for better resource type detection
+
 ## 0.1.1 (2025-11-21)
 
 - Fixed `NullLogger` missing `set_client_initialized` method that caused MCP initialization errors
