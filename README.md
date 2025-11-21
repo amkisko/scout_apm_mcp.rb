@@ -316,7 +316,13 @@ Review policy:
 - It might take up to 6 calendar months to review and merge pull request
 - It might take up to 1 calendar year to review an issue
 
+For more information, see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Security
+
+If you discover a security vulnerability, please report it responsibly. See [SECURITY.md](SECURITY.md) for details.
+
 ## License
 
-The gem is available as open source under the terms of the [MIT License](LICENSE.md).
+The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
 

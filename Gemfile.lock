@@ -1,9 +1,9 @@
 PATH
   remote: .
   specs:
-    scout_apm_mcp (0.1.0)
+    scout_apm_mcp (0.1.1)
       base64 (~> 0.3)
-      fast-mcp (~> 0.1)
+      fast-mcp (>= 0.1, < 2.0)
       opdotenv (~> 1.0)
       rack (~> 2.2, >= 2.2.0)
 

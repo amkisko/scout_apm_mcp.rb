@@ -82,6 +82,10 @@ module ScoutApmMcp
         @client_initialized
       end
 
+      def set_client_initialized(value = true)
+        @client_initialized = value
+      end
+
       def stdio_transport?
         @transport == :stdio
       end
