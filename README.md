@@ -113,11 +113,17 @@ The server will start and communicate via STDIN/STDOUT using the MCP protocol. M
 - **MCP Server Integration**: Ready-to-use MCP server compatible with Cursor IDE, Claude Desktop, and other MCP-enabled tools
 - **API Key Management**: Supports environment variables and 1Password integration (via optional `opdotenv` gem)
 - **URL Parsing**: Helper methods to parse ScoutAPM URLs and extract IDs
+- **Time Utilities**: Helper methods for formatting, parsing, and working with ISO 8601 time strings
+- **Input Validation**: Validates metric types, insight types, and time ranges before API calls
+- **Custom Error Handling**: Dedicated exception classes for better error handling and debugging
 - **Comprehensive API Coverage**: Supports all ScoutAPM API endpoints (apps, metrics, endpoints, traces, errors, insights)
+- **Data Extraction**: Client methods return extracted data instead of full API response structure for easier usage
 
 ## Basic Usage
 
 ### API Client
+
+**Note**: As of version 0.1.3, all client methods return extracted data (arrays, hashes) instead of the full API response structure. This is a breaking change from previous versions.
 
 ```ruby
 require "scout_apm_mcp"
@@ -128,10 +134,13 @@ api_key = ScoutApmMcp::Helpers.get_api_key
 # Create client
 client = ScoutApmMcp::Client.new(api_key: api_key)
 
-# List applications
+# List applications (returns Array<Hash>)
 apps = client.list_apps
 
-# Get application details
+# List applications filtered by active_since
+apps = client.list_apps(active_since: "2025-11-01T00:00:00Z")
+
+# Get application details (returns Hash)
 app = client.get_app(123)
 
 # List endpoints
@@ -140,7 +149,7 @@ endpoints = client.list_endpoints(123)
 # Fetch trace
 trace = client.fetch_trace(123, 456)
 
-# Get metrics
+# Get metrics (returns Hash with series data)
 metrics = client.get_metric(123, "response_time", from: "2025-01-01T00:00:00Z", to: "2025-01-02T00:00:00Z")
 
 # List error groups
@@ -157,6 +166,26 @@ insights = client.get_all_insights(123, limit: 20)
 url = "https://scoutapm.com/apps/123/endpoints/.../trace/456"
 parsed = ScoutApmMcp::Helpers.parse_scout_url(url)
 # => { app_id: 123, endpoint_id: "...", trace_id: 456, decoded_endpoint: "...", query_params: {...} }
+```
+
+### Time and Duration Helpers
+
+```ruby
+# Format Time object to ISO 8601 string
+time_str = ScoutApmMcp::Helpers.format_time(Time.now)
+# => "2025-11-21T12:00:00Z"
+
+# Parse ISO 8601 string to Time object
+time = ScoutApmMcp::Helpers.parse_time("2025-11-21T12:00:00Z")
+# => #<Time: 2025-11-21 12:00:00 UTC>
+
+# Create duration hash from two ISO 8601 strings
+duration = ScoutApmMcp::Helpers.make_duration("2025-11-21T00:00:00Z", "2025-11-21T12:00:00Z")
+# => { start: #<Time: ...>, end: #<Time: ...> }
+
+# Extract endpoint ID from endpoint hash
+endpoint_id = ScoutApmMcp::Helpers.get_endpoint_id(endpoint_hash)
+# => "base64-encoded-endpoint-id"
 ```
 
 ### API Key Management
@@ -193,7 +222,7 @@ api_key = ScoutApmMcp::Helpers.get_api_key(
 
 ### Applications
 
-- `list_apps` - List all applications
+- `list_apps(active_since:)` - List all applications (optionally filtered by last reported time)
 - `get_app(app_id)` - Get application details
 
 ### Metrics
@@ -249,11 +278,32 @@ The server will communicate via STDIN/STDOUT using the MCP protocol. Configure i
 
 ## Error Handling
 
-The client raises exceptions for API errors:
+The client uses custom exception classes for better error handling:
 
-- `RuntimeError` with message containing "Authentication failed" for 401 Unauthorized
-- `RuntimeError` with message containing "Resource not found" for 404 Not Found
-- `RuntimeError` with message containing "API request failed" for other HTTP errors
+- `ScoutApmMcp::Error` - Base exception class for all ScoutAPM SDK errors
+- `ScoutApmMcp::AuthError` - Raised when authentication fails (401 Unauthorized)
+- `ScoutApmMcp::APIError` - Raised for API errors (includes `status_code` and `response_data` attributes)
+
+The client also validates input parameters and raises `ArgumentError` for:
+- Invalid metric types (must be one of: `apdex`, `response_time`, `response_time_95th`, `errors`, `throughput`, `queue_time`)
+- Invalid insight types (must be one of: `n_plus_one`, `memory_bloat`, `slow_query`)
+- Invalid time ranges (from_time must be before to_time, and range cannot exceed 2 weeks)
+- Trace queries older than 7 days (for `list_endpoint_traces`)
+
+```ruby
+begin
+  client.get_metric(123, "invalid_metric", from: "2025-01-01T00:00:00Z", to: "2025-01-02T00:00:00Z")
+rescue ScoutApmMcp::AuthError => e
+  puts "Authentication failed: #{e.message}"
+rescue ScoutApmMcp::APIError => e
+  puts "API error (#{e.status_code}): #{e.message}"
+  puts "Response data: #{e.response_data}"
+rescue ArgumentError => e
+  puts "Invalid parameter: #{e.message}"
+rescue ScoutApmMcp::Error => e
+  puts "Error: #{e.message}"
+end
+```
 
 ## Development
 

@@ -166,14 +166,14 @@ module ScoutApmMcp
 
     # Applications Tools
     class ListAppsTool < BaseTool
-      description "List all applications accessible with the provided API key"
+      description "List all applications accessible with the provided API key. Provide an optional active_since ISO 8601 to filter to only apps that have reported data since that time. Defaults to the metric retention period of thirty days."
 
       arguments do
-        # No arguments required
+        optional(:active_since).maybe(:string).description("ISO 8601 datetime string to filter apps active since that time")
       end
 
-      def call
-        get_client.list_apps
+      def call(active_since: nil)
+        get_client.list_apps(active_since: active_since)
       end
     end
 
@@ -468,9 +468,15 @@ module ScoutApmMcp
             result[:data] = {trace: trace_data}
 
             if include_endpoint && parsed[:endpoint_id]
-              endpoint_data = client.get_endpoint(parsed[:app_id], parsed[:endpoint_id])
-              result[:data][:endpoint] = endpoint_data
-              result[:data][:decoded_endpoint] = parsed[:decoded_endpoint]
+              begin
+                endpoint_data = client.get_endpoint(parsed[:app_id], parsed[:endpoint_id])
+                result[:data][:endpoint] = endpoint_data
+                result[:data][:decoded_endpoint] = parsed[:decoded_endpoint]
+              rescue => e
+                # Endpoint fetch failed, but we still have trace data
+                result[:data][:endpoint_error] = "Failed to fetch endpoint: #{e.message}"
+                result[:data][:decoded_endpoint] = parsed[:decoded_endpoint]
+              end
             end
           else
             raise "Invalid trace URL: missing app_id or trace_id"
