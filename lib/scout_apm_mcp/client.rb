@@ -1,5 +1,6 @@
 require "uri"
 require "net/http"
+require "openssl"
 require "json"
 require "base64"
 
@@ -254,6 +255,10 @@ module ScoutApmMcp
       else
         raise "API request failed: #{response.code} #{response.message}"
       end
+    rescue OpenSSL::SSL::SSLError => e
+      raise "SSL verification failed: #{e.message}. This may be due to system certificate configuration issues."
+    rescue => e
+      raise "Request failed: #{e.class} - #{e.message}"
     end
 
     private
@@ -264,9 +269,24 @@ module ScoutApmMcp
     # @return [Net::HTTP] Configured HTTP client
     def build_http_client(uri)
       http = Net::HTTP.new(uri.host, uri.port)
-      http.use_ssl = uri.scheme == "https"
       http.read_timeout = 10
       http.open_timeout = 10
+
+      if uri.scheme == "https"
+        http.use_ssl = true
+        http.verify_mode = OpenSSL::SSL::VERIFY_PEER
+
+        # Set ca_file directly - this is the simplest and most reliable approach
+        # Try SSL_CERT_FILE first, then default cert file
+        ca_file = if ENV["SSL_CERT_FILE"] && File.file?(ENV["SSL_CERT_FILE"])
+          ENV["SSL_CERT_FILE"]
+        elsif File.exist?(OpenSSL::X509::DEFAULT_CERT_FILE)
+          OpenSSL::X509::DEFAULT_CERT_FILE
+        end
+
+        http.ca_file = ca_file if ca_file
+      end
+
       http
     end
 
@@ -297,6 +317,10 @@ module ScoutApmMcp
       else
         raise "API request failed: #{response.code} #{response.message}\n#{response.body}"
       end
+    rescue OpenSSL::SSL::SSLError => e
+      raise "SSL verification failed: #{e.message}. This may be due to system certificate configuration issues."
+    rescue => e
+      raise "Request failed: #{e.class} - #{e.message}"
     end
   end
 end

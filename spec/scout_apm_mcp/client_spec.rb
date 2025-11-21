@@ -451,6 +451,50 @@ RSpec.describe ScoutApmMcp::Client do
 
       expect { client.fetch_openapi_schema }.to raise_error(/API request failed/)
     end
+
+    it "handles SSL errors with descriptive message" do
+      stub_request(:get, "https://scoutapm.com/api/v0/openapi.yaml")
+        .to_raise(OpenSSL::SSL::SSLError.new("SSL_connect returned=1 errno=0 state=error: certificate verify failed"))
+
+      expect { client.fetch_openapi_schema }.to raise_error(/SSL verification failed/)
+    end
+  end
+
+  describe "SSL certificate handling" do
+    around do |example|
+      original_ssl_cert_file = ENV["SSL_CERT_FILE"]
+      example.run
+      ENV["SSL_CERT_FILE"] = original_ssl_cert_file if original_ssl_cert_file
+      ENV.delete("SSL_CERT_FILE") unless original_ssl_cert_file
+    end
+
+    it "uses SSL_CERT_FILE environment variable when set and file exists" do
+      require "tmpdir"
+      cert_file = File.join(Dir.tmpdir, "test_cert.pem")
+      File.write(cert_file, "test cert content")
+      ENV["SSL_CERT_FILE"] = cert_file
+
+      stub_request(:get, "https://scoutapm.com/api/v0/apps")
+        .to_return(status: 200, body: '{"results": []}')
+
+      # Verify the request succeeds (cert file is set)
+      result = client.list_apps
+      expect(result).to eq({"results" => []})
+
+      File.delete(cert_file) if File.exist?(cert_file)
+    end
+
+    it "falls back to default cert file when SSL_CERT_FILE is not set" do
+      ENV.delete("SSL_CERT_FILE")
+      allow(File).to receive(:exist?).and_call_original
+      allow(File).to receive(:exist?).with(OpenSSL::X509::DEFAULT_CERT_FILE).and_return(true)
+
+      stub_request(:get, "https://scoutapm.com/api/v0/apps")
+        .to_return(status: 200, body: '{"results": []}')
+
+      result = client.list_apps
+      expect(result).to eq({"results" => []})
+    end
   end
 
   describe "error handling" do
@@ -473,6 +517,20 @@ RSpec.describe ScoutApmMcp::Client do
         .to_return(status: 500, body: '{"error": "Internal server error"}')
 
       expect { client.list_apps }.to raise_error(/API request failed/)
+    end
+
+    it "handles SSL errors with descriptive message" do
+      stub_request(:get, "https://scoutapm.com/api/v0/apps")
+        .to_raise(OpenSSL::SSL::SSLError.new("SSL_connect returned=1 errno=0 state=error: certificate verify failed"))
+
+      expect { client.list_apps }.to raise_error(/SSL verification failed/)
+    end
+
+    it "handles generic request errors" do
+      stub_request(:get, "https://scoutapm.com/api/v0/apps")
+        .to_raise(StandardError.new("Network error"))
+
+      expect { client.list_apps }.to raise_error(/Request failed/)
     end
   end
 end

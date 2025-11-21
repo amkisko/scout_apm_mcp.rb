@@ -16,6 +16,21 @@ FastMcp = MCP unless defined?(FastMcp)
 module MCP
   module Transports
     class StdioTransport
+      if method_defined?(:send_error)
+        alias_method :original_send_error, :send_error
+
+        def send_error(code, message, id = nil)
+          # Use placeholder id if nil to satisfy strict MCP client validation
+          # JSON-RPC 2.0 allows null for notifications, but MCP clients require valid id
+          id = "error_#{SecureRandom.hex(8)}" if id.nil?
+          original_send_error(code, message, id)
+        end
+      end
+    end
+  end
+
+  class Server
+    if method_defined?(:send_error)
       alias_method :original_send_error, :send_error
 
       def send_error(code, message, id = nil)
@@ -24,17 +39,6 @@ module MCP
         id = "error_#{SecureRandom.hex(8)}" if id.nil?
         original_send_error(code, message, id)
       end
-    end
-  end
-
-  class Server
-    alias_method :original_send_error, :send_error
-
-    def send_error(code, message, id = nil)
-      # Use placeholder id if nil to satisfy strict MCP client validation
-      # JSON-RPC 2.0 allows null for notifications, but MCP clients require valid id
-      id = "error_#{SecureRandom.hex(8)}" if id.nil?
-      original_send_error(code, message, id)
     end
   end
 end
@@ -141,6 +145,7 @@ module ScoutApmMcp
       server.register_tool(GetInsightsHistoryTool)
       server.register_tool(GetInsightsHistoryByTypeTool)
       server.register_tool(ParseScoutURLTool)
+      server.register_tool(FetchScoutURLTool)
       server.register_tool(FetchOpenAPISchemaTool)
     end
 
@@ -427,14 +432,92 @@ module ScoutApmMcp
 
     # Utility Tools
     class ParseScoutURLTool < BaseTool
-      description "Parse a ScoutAPM trace URL and extract app_id, endpoint_id, and trace_id"
+      description "Parse a ScoutAPM URL and extract resource information (app_id, endpoint_id, trace_id, etc.)"
 
       arguments do
-        required(:url).filled(:string).description("Full ScoutAPM trace URL (e.g., https://scoutapm.com/apps/123/endpoints/.../trace/456)")
+        required(:url).filled(:string).description("Full ScoutAPM URL (e.g., https://scoutapm.com/apps/123/endpoints/.../trace/456)")
       end
 
       def call(url:)
         Helpers.parse_scout_url(url)
+      end
+    end
+
+    class FetchScoutURLTool < BaseTool
+      description "Fetch data from a ScoutAPM URL by automatically detecting the resource type and fetching the appropriate data"
+
+      arguments do
+        required(:url).filled(:string).description("Full ScoutAPM URL (e.g., https://scoutapm.com/apps/123/endpoints/.../trace/456)")
+        optional(:include_endpoint).filled(:bool).description("For trace URLs, also fetch endpoint details for context (default: false)")
+      end
+
+      def call(url:, include_endpoint: false)
+        parsed = Helpers.parse_scout_url(url)
+        client = get_client
+
+        result = {
+          url: url,
+          parsed: parsed,
+          data: nil
+        }
+
+        case parsed[:url_type]
+        when :trace
+          if parsed[:app_id] && parsed[:trace_id]
+            trace_data = client.fetch_trace(parsed[:app_id], parsed[:trace_id])
+            result[:data] = {trace: trace_data}
+
+            if include_endpoint && parsed[:endpoint_id]
+              endpoint_data = client.get_endpoint(parsed[:app_id], parsed[:endpoint_id])
+              result[:data][:endpoint] = endpoint_data
+              result[:data][:decoded_endpoint] = parsed[:decoded_endpoint]
+            end
+          else
+            raise "Invalid trace URL: missing app_id or trace_id"
+          end
+        when :endpoint
+          if parsed[:app_id] && parsed[:endpoint_id]
+            endpoint_data = client.get_endpoint(parsed[:app_id], parsed[:endpoint_id])
+            result[:data] = {
+              endpoint: endpoint_data,
+              decoded_endpoint: parsed[:decoded_endpoint]
+            }
+          else
+            raise "Invalid endpoint URL: missing app_id or endpoint_id"
+          end
+        when :error_group
+          if parsed[:app_id] && parsed[:error_id]
+            error_data = client.get_error_group(parsed[:app_id], parsed[:error_id])
+            result[:data] = {error_group: error_data}
+          else
+            raise "Invalid error group URL: missing app_id or error_id"
+          end
+        when :insight
+          if parsed[:app_id]
+            if parsed[:insight_type]
+              insight_data = client.get_insight_by_type(parsed[:app_id], parsed[:insight_type])
+              result[:data] = {insight: insight_data, insight_type: parsed[:insight_type]}
+            else
+              insights_data = client.get_all_insights(parsed[:app_id])
+              result[:data] = {insights: insights_data}
+            end
+          else
+            raise "Invalid insight URL: missing app_id"
+          end
+        when :app
+          if parsed[:app_id]
+            app_data = client.get_app(parsed[:app_id])
+            result[:data] = {app: app_data}
+          else
+            raise "Invalid app URL: missing app_id"
+          end
+        when :unknown
+          raise "Unknown or unsupported ScoutAPM URL format: #{url}"
+        else
+          raise "Unable to determine URL type from: #{url}"
+        end
+
+        result
       end
     end
 
