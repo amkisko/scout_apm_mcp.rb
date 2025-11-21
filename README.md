@@ -107,6 +107,22 @@ scout_apm_mcp
 
 The server will start and communicate via STDIN/STDOUT using the MCP protocol. Make sure you have your ScoutAPM API key configured (see API Key Management section below).
 
+## Upgrading
+
+To upgrade to the latest version of the gem:
+
+```bash
+gem update scout_apm_mcp
+```
+
+If you're using Bundler, update your `Gemfile.lock`:
+
+```bash
+bundle update scout_apm_mcp
+```
+
+**Note**: As of version 0.1.3, client methods return extracted data (arrays, hashes) instead of full API response structures. This is a breaking change from previous versions. See the [CHANGELOG.md](CHANGELOG.md) for details on breaking changes and new features.
+
 ## Features
 
 - **ScoutAPM API Client**: Full-featured client for ScoutAPM REST API
