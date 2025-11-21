@@ -28,22 +28,6 @@ For Cursor IDE, create or update `.cursor/mcp.json` in your project:
 {
   "mcpServers": {
     "scout-apm": {
-      "command": "bundle",
-      "args": ["exec", "scout_apm_mcp"],
-      "env": {
-        "OP_ENV_ENTRY_PATH": "op://Vault Name/Item Name"
-      }
-    }
-  }
-}
-```
-
-Or if installed globally:
-
-```json
-{
-  "mcpServers": {
-    "scout-apm": {
       "command": "scout_apm_mcp",
       "env": {
         "OP_ENV_ENTRY_PATH": "op://Vault Name/Item Name"
@@ -64,21 +48,10 @@ For Claude Desktop, edit the MCP configuration file:
 {
   "mcpServers": {
     "scout-apm": {
-      "command": "bundle",
-      "args": ["exec", "scout_apm_mcp"],
-      "cwd": "/path/to/your/project"
-    }
-  }
-}
-```
-
-Or if installed globally:
-
-```json
-{
-  "mcpServers": {
-    "scout-apm": {
-      "command": "scout_apm_mcp"
+      "command": "scout_apm_mcp",
+      "env": {
+        "OP_ENV_ENTRY_PATH": "op://Vault Name/Item Name"
+      }
     }
   }
 }
