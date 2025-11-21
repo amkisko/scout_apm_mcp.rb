@@ -20,6 +20,12 @@ Sponsored by [Kisko Labs](https://www.kiskolabs.com).
 2. In 1Password create an item with the name "Scout APM API" and store the API key in a new field named API_KEY
 3. Configure your favorite service to use local MCP server, ensure OP_ENV_ENTRY_PATH has correct vault and item names (both are visible in 1Password UI)
 
+### Installation
+
+```bash
+gem install scout_apm_mcp
+```
+
 ### Cursor IDE Configuration
 
 For Cursor IDE, create or update `.cursor/mcp.json` in your project:
