@@ -1,8 +1,9 @@
 require "uri"
 require "base64"
+require "time"
 
 module ScoutApmMcp
-  # Helper module for API key management and URL parsing
+  # Helper module for API key management, URL parsing, and time utilities
   module Helpers
     # Get API key from environment or 1Password
     #
@@ -150,6 +151,54 @@ module ScoutApmMcp
     rescue
       # If decoding raises an exception, return original string
       endpoint_id.dup.force_encoding(Encoding::UTF_8)
+    end
+
+    # Get a unique identifier for an endpoint from an endpoint dictionary
+    #
+    # This is provided by the API implicitly in the 'link' field.
+    #
+    # @param endpoint [Hash] Endpoint dictionary from the API
+    # @return [String] Endpoint ID extracted from the link field, or empty string if not found
+    def self.get_endpoint_id(endpoint)
+      link = endpoint["link"] || endpoint[:link] || ""
+      return "" if link.empty?
+
+      # Extract the endpoint ID from the link (last path segment)
+      link.split("/").last || ""
+    end
+
+    # Format datetime to ISO 8601 string for API
+    #
+    # Relies on UTC timezone. Converts the time to UTC if it's not already.
+    #
+    # @param time [Time] Time object to format
+    # @return [String] ISO 8601 formatted time string (e.g., "2025-01-01T00:00:00Z")
+    def self.format_time(time)
+      time.utc.strftime("%Y-%m-%dT%H:%M:%SZ")
+    end
+
+    # Parse ISO 8601 time string to Time object
+    #
+    # Handles both 'Z' suffix and timezone offsets.
+    #
+    # @param time_str [String] ISO 8601 time string (e.g., "2025-01-01T00:00:00Z")
+    # @return [Time] Time object in UTC
+    def self.parse_time(time_str)
+      # Replace Z with +00:00 for Ruby's Time parser
+      normalized = time_str.sub(/Z\z/i, "+00:00")
+      Time.parse(normalized).utc
+    end
+
+    # Create a Duration object from ISO 8601 strings
+    #
+    # @param from_str [String] Start time in ISO 8601 format
+    # @param to_str [String] End time in ISO 8601 format
+    # @return [Hash] Hash with :start and :end Time objects
+    def self.make_duration(from_str, to_str)
+      {
+        start: parse_time(from_str),
+        end: parse_time(to_str)
+      }
     end
   end
 end

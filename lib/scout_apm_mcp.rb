@@ -2,6 +2,7 @@ require "uri"
 require "base64"
 
 require_relative "scout_apm_mcp/version"
+require_relative "scout_apm_mcp/errors"
 require_relative "scout_apm_mcp/client"
 require_relative "scout_apm_mcp/helpers"
 # Server is loaded on-demand when running the executable

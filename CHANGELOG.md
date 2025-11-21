@@ -1,5 +1,22 @@
 # CHANGELOG
 
+## 0.1.3 (2025-11-21)
+
+- Custom exception classes (`ScoutApmMcp::Error`, `ScoutApmMcp::AuthError`, `ScoutApmMcp::APIError`) for better error handling
+- Input validation for metric types (`VALID_METRICS` constant) and insight types (`VALID_INSIGHTS` constant)
+- Time range validation (ensures from_time < to_time and range doesn't exceed 2 weeks)
+- Trace age validation (ensures trace queries aren't older than 7 days)
+- Client methods now return extracted data instead of full API response structure
+- Time/Duration helpers (`Helpers.format_time`, `Helpers.parse_time`, `Helpers.make_duration`)
+- Endpoint ID extraction helper (`Helpers.get_endpoint_id`)
+- User-Agent header (`scout-apm-mcp-rb/VERSION`) on all API requests
+- `active_since` parameter to `list_apps` method for filtering apps by last reported time
+- API-level error parsing - checks for `header.status.code` in response body
+- Error handling now uses custom exception classes instead of generic `RuntimeError`
+- MCP `ListAppsTool` now supports optional `active_since` parameter
+- Error responses now properly parse API-level error codes from response body
+- Invalid metric types, insight types, and time ranges are now validated before API calls
+
 ## 0.1.2 (2025-11-21)
 
 - Enhanced SSL certificate handling with support for `SSL_CERT_FILE` environment variable and automatic fallback to system certificates
