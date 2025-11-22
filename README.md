@@ -34,14 +34,18 @@ For Cursor IDE, create or update `.cursor/mcp.json` in your project:
 {
   "mcpServers": {
     "scout-apm": {
-      "command": "scout_apm_mcp",
+      "command": "gem",
+      "args": ["exec", "scout_apm_mcp"],
       "env": {
-        "OP_ENV_ENTRY_PATH": "op://Vault Name/Item Name"
+        "OP_ENV_ENTRY_PATH": "op://Vault Name/Item Name",
+        "RUBY_VERSION": "3.4.7"
       }
     }
   }
 }
 ```
+
+**Note**: Using `gem exec` ensures the correct Ruby version is used. If you're using a Ruby version manager like [mise](https://mise.jdx.dev/) or [rbenv](https://github.com/rbenv/rbenv), set the `RUBY_VERSION` environment variable to match your desired Ruby version. The `gem exec` command will automatically use the correct Ruby version based on your version manager configuration.
 
 ### Claude Desktop Configuration
 
@@ -54,16 +58,18 @@ For Claude Desktop, edit the MCP configuration file:
 {
   "mcpServers": {
     "scout-apm": {
-      "command": "scout_apm_mcp",
+      "command": "gem",
+      "args": ["exec", "scout_apm_mcp"],
       "env": {
-        "OP_ENV_ENTRY_PATH": "op://Vault Name/Item Name"
+        "OP_ENV_ENTRY_PATH": "op://Vault Name/Item Name",
+        "RUBY_VERSION": "3.4.7"
       }
     }
   }
 }
 ```
 
-**Note**: After updating the configuration, restart Claude Desktop for changes to take effect.
+**Note**: After updating the configuration, restart Claude Desktop for changes to take effect. Using `gem exec` ensures the correct Ruby version is used. If you're using a Ruby version manager like [mise](https://mise.jdx.dev/) or [rbenv](https://github.com/rbenv/rbenv), set the `RUBY_VERSION` environment variable to match your desired Ruby version. The `gem exec` command will automatically use the correct Ruby version based on your version manager configuration.
 
 ### Security Best Practice
 
