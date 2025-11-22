@@ -1,6 +1,6 @@
 # scout_apm_mcp
 
-[![Gem Version](https://badge.fury.io/rb/scout_apm_mcp.svg?v=0.1.0)](https://badge.fury.io/rb/scout_apm_mcp) [![Test Status](https://github.com/amkisko/scout_apm_mcp.rb/actions/workflows/test.yml/badge.svg)](https://github.com/amkisko/scout_apm_mcp.rb/actions/workflows/test.yml) [![codecov](https://codecov.io/gh/amkisko/scout_apm_mcp.rb/graph/badge.svg?token=HVWDDNLEO5)](https://codecov.io/gh/amkisko/scout_apm_mcp.rb)
+[![Gem Version](https://badge.fury.io/rb/scout_apm_mcp.svg?v=0.1.3)](https://badge.fury.io/rb/scout_apm_mcp) [![Test Status](https://github.com/amkisko/scout_apm_mcp.rb/actions/workflows/test.yml/badge.svg)](https://github.com/amkisko/scout_apm_mcp.rb/actions/workflows/test.yml) [![codecov](https://codecov.io/gh/amkisko/scout_apm_mcp.rb/graph/badge.svg?token=HVWDDNLEO5)](https://codecov.io/gh/amkisko/scout_apm_mcp.rb)
 
 Ruby gem providing ScoutAPM API client and MCP (Model Context Protocol) server tools for fetching traces, endpoints, metrics, errors, and insights. Integrates with MCP-compatible clients like Cursor IDE, Claude Desktop, and other MCP-enabled tools.
 
