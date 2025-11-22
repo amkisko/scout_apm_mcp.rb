@@ -1,10 +1,11 @@
 {
   "mcpServers": {
     "scout-apm": {
-      "command": "bundle",
+      "command": "gem",
       "args": ["exec", "scout_apm_mcp"],
       "env": {
-        "OP_ENV_ENTRY_PATH": "op://My Vault/Scout APM API"
+        "OP_ENV_ENTRY_PATH": "op://My Vault/Scout APM API",
+        "RUBY_VERSION": "3.4.7"
       }
     }
   }
