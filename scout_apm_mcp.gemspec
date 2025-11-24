@@ -36,7 +36,7 @@ Gem::Specification.new do |spec|
 
   spec.add_runtime_dependency "fast-mcp", ">= 0.1", "< 2.0"
   spec.add_runtime_dependency "base64", "~> 0.3"
-  spec.add_runtime_dependency "rack", "~> 2.2", ">= 2.2.0"
+  spec.add_runtime_dependency "rack", ">= 2.2", "< 4.0"
   spec.add_runtime_dependency "opdotenv", "~> 1.0"
 
   spec.add_development_dependency "rspec", "~> 3.13"
