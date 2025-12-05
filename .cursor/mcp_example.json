@@ -1,7 +1,7 @@
 {
   "mcpServers": {
-    "scout-apm": {
-      "command": "gem",
+    "scout-apm-dev": {
+      "command": "bundle",
       "args": ["exec", "scout_apm_mcp"],
       "env": {
         "OP_ENV_ENTRY_PATH": "op://My Vault/Scout APM API",
