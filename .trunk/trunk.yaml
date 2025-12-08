@@ -12,17 +12,23 @@ plugins:
 # Many linters and tools depend on runtimes - configure them here. (https://docs.trunk.io/runtimes)
 runtimes:
   enabled:
+    - go@1.21.0
     - node@22.16.0
     - python@3.10.8
     - ruby@>=3.0.0
 tools:
   definitions:
-    - name: standardrb
+    - name: rubocop
       runtime: ruby
-      package: standard
-      shims: [standardrb]
+      package: rubocop
+      known_good_version: 1.81.7
+      shims: [rubocop]
       extra_packages:
+        - standard-rails
         - standard-performance
+        - standard-rspec
+        - rubocop-rails
+        - rubocop-rspec
 # This is the section where you manage your linters. (https://docs.trunk.io/check/configuration)
 lint:
   disabled:
@@ -30,7 +36,7 @@ lint:
     - rufo
     - eslint
     - prettier
-    - rubocop
+    - standardrb
     - semgrep
     - oxipng
     - svgo
@@ -40,7 +46,7 @@ lint:
     - stylelint
     - biome
   ignore:
-    - linters: [standardrb]
+    - linters: [rubocop]
       paths:
         - bin/**
         - vendor/**
@@ -49,14 +55,14 @@ lint:
         - gemfiles/**
         - usr/**
   enabled:
-    - standardrb
+    - rubocop
     - yamllint@1.37.1
     - gitleaks@8.29.0
     - actionlint@1.7.8
-    - checkov@3.2.493
+    - checkov@3.2.495
     - dotenv-linter@4.0.0
     - git-diff-check
-    - markdownlint@0.45.0
+    - markdownlint@0.46.0
     - osv-scanner@2.2.4
     - shellcheck@0.11.0
     - trivy@0.67.2
@@ -67,4 +73,3 @@ actions:
     - trunk-fmt-pre-commit
   enabled:
     - trunk-upgrade-available
-
