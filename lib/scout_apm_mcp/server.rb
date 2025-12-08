@@ -133,7 +133,6 @@ module ScoutApmMcp
       server.register_tool(ListMetricsTool)
       server.register_tool(GetMetricTool)
       server.register_tool(ListEndpointsTool)
-      server.register_tool(FetchEndpointTool)
       server.register_tool(GetEndpointMetricsTool)
       server.register_tool(ListEndpointTracesTool)
       server.register_tool(FetchTraceTool)
@@ -166,10 +165,23 @@ module ScoutApmMcp
 
     # Applications Tools
     class ListAppsTool < BaseTool
-      description "List all applications accessible with the provided API key. Provide an optional active_since ISO 8601 to filter to only apps that have reported data since that time. Defaults to the metric retention period of thirty days."
+      description <<~DESC
+        List all applications accessible with the provided API key.
+
+        Returns an array of applications with details like name, ID, and last reported time.
+        Use the app_id from the results to make subsequent API calls.
+
+        Optional filtering:
+        - active_since: Only return apps that have reported data since this time (ISO 8601 format)
+        - Default behavior: Returns all apps (no filtering by default, but API may filter to last 30 days)
+
+        Example:
+        - List all apps: call without parameters
+        - List apps active in last 7 days: provide active_since="2025-01-08T00:00:00Z"
+      DESC
 
       arguments do
-        optional(:active_since).maybe(:string).description("ISO 8601 datetime string to filter apps active since that time")
+        optional(:active_since).maybe(:string).description("ISO 8601 datetime string to filter apps active since that time (e.g., 2025-01-08T00:00:00Z)")
       end
 
       def call(active_since: nil)
@@ -203,80 +215,151 @@ module ScoutApmMcp
     end
 
     class GetMetricTool < BaseTool
-      description "Get time-series data for a specific metric type"
+      description <<~DESC
+        Get time-series data for a specific metric type.
+
+        Available metric types:
+        - apdex: Application Performance Index (0-1, higher is better)
+        - response_time: Average response time in milliseconds
+        - response_time_95th: 95th percentile response time in milliseconds
+        - errors: Number of errors
+        - throughput: Requests per second
+        - queue_time: Time spent in queue in milliseconds
+
+        You can specify time ranges using:
+        1. Quick range templates: range="30min", "1day", "3days", "7days", etc.
+        2. Explicit times: from and to with ISO 8601 timestamps
+
+        Examples:
+        - Get response time for last hour: metric_type="response_time", range="1hr"
+        - Get error count for last day: metric_type="errors", range="1day"
+        - Get metrics for specific range: metric_type="apdex", from="2025-01-15T10:00:00Z", to="2025-01-15T12:00:00Z"
+      DESC
 
       arguments do
         required(:app_id).filled(:integer).description("ScoutAPM application ID")
         required(:metric_type).filled(:string).description("Metric type: apdex, response_time, response_time_95th, errors, throughput, queue_time")
-        optional(:from).maybe(:string).description("Start time in ISO 8601 format (e.g., 2025-11-17T15:25:35Z)")
-        optional(:to).maybe(:string).description("End time in ISO 8601 format (e.g., 2025-11-18T15:25:35Z)")
+        optional(:range).maybe(:string).description("Quick time range template: 30min, 60min, 3hrs, 6hrs, 12hrs, 1day, 3days, 7days. If provided, calculates from/to automatically.")
+        optional(:from).maybe(:string).description("Start time in ISO 8601 format (e.g., 2025-11-17T15:25:35Z). Ignored if range is provided.")
+        optional(:to).maybe(:string).description("End time in ISO 8601 format (e.g., 2025-11-18T15:25:35Z). Used as end point for range if range is provided.")
       end
 
-      def call(app_id:, metric_type:, from: nil, to: nil)
-        get_client.get_metric(app_id, metric_type, from: from, to: to)
+      def call(app_id:, metric_type:, range: nil, from: nil, to: nil)
+        get_client.get_metric(app_id, metric_type, from: from, to: to, range: range)
       end
     end
 
     # Endpoints Tools
     class ListEndpointsTool < BaseTool
-      description "List all endpoints for an application"
+      description <<~DESC
+        List all endpoints for an application.
+
+        The API requires timeframe parameters. You can specify time ranges in two ways:
+        1. Quick range templates: Use the 'range' parameter (e.g., "30min", "1day", "3days", "7days")
+        2. Explicit times: Use 'from' and 'to' parameters with ISO 8601 timestamps
+
+        If neither from/to nor range are provided, defaults to the last 7 days.
+
+        Quick range templates (case-insensitive):
+        - "30min" or "30mins" - Last 30 minutes
+        - "60min" or "60mins" or "1hr" or "1hour" - Last 60 minutes
+        - "3hrs" or "3hours" - Last 3 hours
+        - "6hrs" or "6hours" - Last 6 hours
+        - "12hrs" or "12hours" - Last 12 hours
+        - "1day" or "1days" - Last 24 hours
+        - "3days" - Last 3 days
+        - "7days" - Last 7 days (default)
+
+        Examples:
+        - List endpoints for last 30 minutes: range="30min"
+        - List endpoints for last day: range="1day"
+        - List endpoints for a specific range: from="2025-01-15T10:00:00Z", to="2025-01-15T12:00:00Z"
+        - List endpoints from a specific time to now: from="2025-01-15T10:00:00Z"
+        - List endpoints for 1 day ending at specific time: range="1day", to="2025-01-15T12:00:00Z"
+      DESC
 
       arguments do
         required(:app_id).filled(:integer).description("ScoutAPM application ID")
-        optional(:from).maybe(:string).description("Start time in ISO 8601 format (e.g., 2025-11-17T15:25:35Z)")
-        optional(:to).maybe(:string).description("End time in ISO 8601 format (e.g., 2025-11-18T15:25:35Z)")
+        optional(:range).maybe(:string).description("Quick time range template: 30min, 60min, 3hrs, 6hrs, 12hrs, 1day, 3days, 7days. If provided, calculates from/to automatically.")
+        optional(:from).maybe(:string).description("Start time in ISO 8601 format (e.g., 2025-11-17T15:25:35Z). Ignored if range is provided.")
+        optional(:to).maybe(:string).description("End time in ISO 8601 format (e.g., 2025-11-18T15:25:35Z). Used as end point for range if range is provided, otherwise defaults to now.")
       end
 
-      def call(app_id:, from: nil, to: nil)
-        get_client.list_endpoints(app_id, from: from, to: to)
-      end
-    end
-
-    class FetchEndpointTool < BaseTool
-      description "Fetch endpoint details from ScoutAPM API"
-
-      arguments do
-        required(:app_id).filled(:integer).description("ScoutAPM application ID")
-        required(:endpoint_id).filled(:string).description("Endpoint ID (base64 URL-encoded)")
-      end
-
-      def call(app_id:, endpoint_id:)
-        client = get_client
-        {
-          endpoint: client.get_endpoint(app_id, endpoint_id),
-          decoded_endpoint: Helpers.decode_endpoint_id(endpoint_id)
-        }
+      def call(app_id:, range: nil, from: nil, to: nil)
+        get_client.list_endpoints(app_id, from: from, to: to, range: range)
       end
     end
 
     class GetEndpointMetricsTool < BaseTool
-      description "Get metric data for a specific endpoint"
+      description <<~DESC
+        Get metric data for a specific endpoint.
+
+        Available metric types:
+        - apdex: Application Performance Index (0-1, higher is better)
+        - response_time: Average response time in milliseconds
+        - response_time_95th: 95th percentile response time in milliseconds
+        - errors: Number of errors
+        - throughput: Requests per second
+        - queue_time: Time spent in queue in milliseconds
+
+        You can specify time ranges using:
+        1. Quick range templates: range="30min", "1day", "3days", "7days", etc.
+        2. Explicit times: from and to with ISO 8601 timestamps
+
+        Returns time-series data points for the specified metric type.
+
+        Examples:
+        - Get response time for last hour: metric_type="response_time", range="1hr"
+        - Get error count for last day: metric_type="errors", range="1day"
+        - Get metrics for specific range: metric_type="apdex", from="2025-01-15T10:00:00Z", to="2025-01-15T12:00:00Z"
+      DESC
 
       arguments do
         required(:app_id).filled(:integer).description("ScoutAPM application ID")
-        required(:endpoint_id).filled(:string).description("Endpoint ID (base64 URL-encoded)")
+        required(:endpoint_id).filled(:string).description("Endpoint ID (base64 URL-encoded). Extract from ScoutAPM URLs or use ParseScoutURLTool.")
         required(:metric_type).filled(:string).description("Metric type: apdex, response_time, response_time_95th, errors, throughput, queue_time")
-        optional(:from).maybe(:string).description("Start time in ISO 8601 format (e.g., 2025-11-17T15:25:35Z)")
-        optional(:to).maybe(:string).description("End time in ISO 8601 format (e.g., 2025-11-18T15:25:35Z)")
+        optional(:range).maybe(:string).description("Quick time range template: 30min, 60min, 3hrs, 6hrs, 12hrs, 1day, 3days, 7days. If provided, calculates from/to automatically.")
+        optional(:from).maybe(:string).description("Start time in ISO 8601 format (e.g., 2025-11-17T15:25:35Z). Ignored if range is provided.")
+        optional(:to).maybe(:string).description("End time in ISO 8601 format (e.g., 2025-11-18T15:25:35Z). Used as end point for range if range is provided.")
       end
 
-      def call(app_id:, endpoint_id:, metric_type:, from: nil, to: nil)
-        get_client.get_endpoint_metrics(app_id, endpoint_id, metric_type, from: from, to: to)
+      def call(app_id:, endpoint_id:, metric_type:, range: nil, from: nil, to: nil)
+        get_client.get_endpoint_metrics(app_id, endpoint_id, metric_type, from: from, to: to, range: range)
       end
     end
 
     class ListEndpointTracesTool < BaseTool
-      description "List traces for a specific endpoint (max 100, within 7 days)"
+      description <<~DESC
+        List traces for a specific endpoint (max 100, within 7 days).
+
+        Traces are individual request executions that can be analyzed for performance issues.
+        Returns up to 100 traces for the specified endpoint within the last 7 days.
+
+        You can specify time ranges using:
+        1. Quick range templates: range="30min", "1day", "3days", "7days", etc.
+        2. Explicit times: from and to with ISO 8601 timestamps
+
+        Time range constraints:
+        - If from is provided, it must be within the last 7 days
+        - Maximum 100 traces returned per request
+        - Use the trace_id from results with FetchTraceTool for detailed analysis
+
+        Examples:
+        - List traces from last hour: range="1hr"
+        - List traces from last day: range="1day"
+        - List traces for specific range: from="2025-01-15T10:00:00Z", to="2025-01-15T12:00:00Z"
+      DESC
 
       arguments do
         required(:app_id).filled(:integer).description("ScoutAPM application ID")
-        required(:endpoint_id).filled(:string).description("Endpoint ID (base64 URL-encoded)")
-        optional(:from).maybe(:string).description("Start time in ISO 8601 format (e.g., 2025-11-17T15:25:35Z)")
-        optional(:to).maybe(:string).description("End time in ISO 8601 format (e.g., 2025-11-18T15:25:35Z)")
+        required(:endpoint_id).filled(:string).description("Endpoint ID (base64 URL-encoded). Extract from ScoutAPM URLs or use ParseScoutURLTool.")
+        optional(:range).maybe(:string).description("Quick time range template: 30min, 60min, 3hrs, 6hrs, 12hrs, 1day, 3days, 7days. If provided, calculates from/to automatically.")
+        optional(:from).maybe(:string).description("Start time in ISO 8601 format (e.g., 2025-11-17T15:25:35Z). Must be within last 7 days. Ignored if range is provided.")
+        optional(:to).maybe(:string).description("End time in ISO 8601 format (e.g., 2025-11-18T15:25:35Z). Used as end point for range if range is provided.")
       end
 
-      def call(app_id:, endpoint_id:, from: nil, to: nil)
-        get_client.list_endpoint_traces(app_id, endpoint_id, from: from, to: to)
+      def call(app_id:, endpoint_id:, range: nil, from: nil, to: nil)
+        get_client.list_endpoint_traces(app_id, endpoint_id, from: from, to: to, range: range)
       end
     end
 
@@ -432,10 +515,28 @@ module ScoutApmMcp
 
     # Utility Tools
     class ParseScoutURLTool < BaseTool
-      description "Parse a ScoutAPM URL and extract resource information (app_id, endpoint_id, trace_id, etc.)"
+      description <<~DESC
+        Parse a ScoutAPM URL and extract resource information (app_id, endpoint_id, trace_id, etc.).
+
+        This tool extracts structured information from ScoutAPM URLs without making API calls.
+        Useful for extracting IDs before making other API requests.
+
+        Returns a hash with:
+        - url_type: :endpoint, :trace, :error_group, :insight, :app, or :unknown
+        - app_id: Application ID (integer)
+        - endpoint_id: Base64 URL-encoded endpoint ID (if present)
+        - trace_id: Trace ID (if present)
+        - error_id: Error group ID (if present)
+        - insight_type: Insight type (if present)
+        - decoded_endpoint: Human-readable endpoint path (if endpoint_id present)
+
+        Example:
+        - Input: "https://scoutapm.com/apps/123/endpoints/ABC123.../trace/456"
+        - Output: {url_type: :trace, app_id: 123, endpoint_id: "ABC123...", trace_id: 456, decoded_endpoint: "Controller/Action"}
+      DESC
 
       arguments do
-        required(:url).filled(:string).description("Full ScoutAPM URL (e.g., https://scoutapm.com/apps/123/endpoints/.../trace/456)")
+        required(:url).filled(:string).description("Full ScoutAPM URL")
       end
 
       def call(url:)
@@ -444,10 +545,27 @@ module ScoutApmMcp
     end
 
     class FetchScoutURLTool < BaseTool
-      description "Fetch data from a ScoutAPM URL by automatically detecting the resource type and fetching the appropriate data"
+      description <<~DESC
+        Fetch data from a ScoutAPM URL by automatically detecting the resource type and fetching the appropriate data.
+
+        This tool automatically parses ScoutAPM URLs and fetches the corresponding data.
+        Supported URL types:
+        - Endpoint URLs: /apps/{app_id}/endpoints/{endpoint_id} (fetches from endpoint list)
+        - Trace URLs: /apps/{app_id}/endpoints/{endpoint_id}/trace/{trace_id}
+        - Error group URLs: /apps/{app_id}/error_groups/{error_id}
+        - Insight URLs: /apps/{app_id}/insights or /apps/{app_id}/insights/{insight_type}
+        - App URLs: /apps/{app_id}
+
+        Examples:
+        - https://scoutapm.com/apps/123/endpoints/ABC123... (endpoint)
+        - https://scoutapm.com/apps/123/endpoints/ABC123.../trace/456 (trace)
+        - https://scoutapm.com/apps/123/error_groups/789 (error group)
+
+        For trace URLs, set include_endpoint=true to also fetch endpoint context.
+      DESC
 
       arguments do
-        required(:url).filled(:string).description("Full ScoutAPM URL (e.g., https://scoutapm.com/apps/123/endpoints/.../trace/456)")
+        required(:url).filled(:string).description("Full ScoutAPM URL")
         optional(:include_endpoint).filled(:bool).description("For trace URLs, also fetch endpoint details for context (default: false)")
       end
 
@@ -469,11 +587,16 @@ module ScoutApmMcp
 
             if include_endpoint && parsed[:endpoint_id]
               begin
-                endpoint_data = client.get_endpoint(parsed[:app_id], parsed[:endpoint_id])
-                result[:data][:endpoint] = endpoint_data
+                endpoints = client.list_endpoints(parsed[:app_id], range: "7days")
+                endpoint_data = endpoints.find { |ep| Helpers.get_endpoint_id(ep) == parsed[:endpoint_id] }
+
+                if endpoint_data
+                  result[:data][:endpoint] = endpoint_data
+                else
+                  result[:data][:endpoint_error] = "Endpoint not found in the last 7 days"
+                end
                 result[:data][:decoded_endpoint] = parsed[:decoded_endpoint]
               rescue => e
-                # Endpoint fetch failed, but we still have trace data
                 result[:data][:endpoint_error] = "Failed to fetch endpoint: #{e.message}"
                 result[:data][:decoded_endpoint] = parsed[:decoded_endpoint]
               end
@@ -483,11 +606,17 @@ module ScoutApmMcp
           end
         when :endpoint
           if parsed[:app_id] && parsed[:endpoint_id]
-            endpoint_data = client.get_endpoint(parsed[:app_id], parsed[:endpoint_id])
-            result[:data] = {
-              endpoint: endpoint_data,
-              decoded_endpoint: parsed[:decoded_endpoint]
-            }
+            endpoints = client.list_endpoints(parsed[:app_id], range: "7days")
+            endpoint_data = endpoints.find { |ep| Helpers.get_endpoint_id(ep) == parsed[:endpoint_id] }
+
+            if endpoint_data
+              result[:data] = {
+                endpoint: endpoint_data,
+                decoded_endpoint: parsed[:decoded_endpoint]
+              }
+            else
+              raise "Endpoint not found in the last 7 days. Try using ListEndpointsTool with a longer time range."
+            end
           else
             raise "Invalid endpoint URL: missing app_id or endpoint_id"
           end

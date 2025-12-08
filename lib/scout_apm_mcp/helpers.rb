@@ -14,14 +14,10 @@ module ScoutApmMcp
     # @return [String] API key
     # @raise [RuntimeError] if API key cannot be found
     def self.get_api_key(api_key: nil, op_vault: nil, op_item: nil, op_field: "API_KEY")
-      # Use provided API key if available
       return api_key if api_key && !api_key.empty?
 
-      # Check environment variable (may have been set by opdotenv loaded early in server startup)
       api_key = ENV["API_KEY"] || ENV["SCOUT_APM_API_KEY"]
       return api_key if api_key && !api_key.empty?
-
-      # Try direct 1Password CLI as fallback (opdotenv was already tried in server startup)
       op_env_entry_path = ENV["OP_ENV_ENTRY_PATH"]
       if op_env_entry_path && !op_env_entry_path.empty?
         begin
@@ -55,7 +51,6 @@ module ScoutApmMcp
           api_key = `op read "op://#{op_vault}/#{op_item}/#{op_field}" 2>/dev/null`.strip
           return api_key if api_key && !api_key.empty?
         rescue
-          # Silently fail
         end
       end
 
@@ -135,7 +130,6 @@ module ScoutApmMcp
     # @return [String] Decoded endpoint ID
     def self.decode_endpoint_id(endpoint_id)
       decoded = Base64.urlsafe_decode64(endpoint_id)
-      # Check if decoded result is valid UTF-8
       if decoded.force_encoding(Encoding::UTF_8).valid_encoding?
         decoded.force_encoding(Encoding::UTF_8)
       else
@@ -198,6 +192,60 @@ module ScoutApmMcp
       {
         start: parse_time(from_str),
         end: parse_time(to_str)
+      }
+    end
+
+    # Parse a time range string into seconds
+    #
+    # Supports formats like: "30min", "60min", "3hrs", "6hrs", "12hrs", "1day", "3days", "7days"
+    # Case-insensitive, supports singular and plural forms
+    #
+    # @param range_str [String] Time range string (e.g., "30min", "1day", "7days")
+    # @return [Integer] Duration in seconds
+    # @raise [ArgumentError] If the range string format is invalid
+    def self.parse_range(range_str)
+      return nil if range_str.nil? || range_str.empty?
+
+      # Normalize: lowercase, remove spaces, handle singular/plural
+      normalized = range_str.downcase.strip.gsub(/\s+/, "")
+
+      # Match pattern: number followed by unit
+      match = normalized.match(/\A(\d+)(min|mins?|hr|hrs?|hour|hours|day|days)\z/)
+      unless match
+        valid_ranges = %w[30min 60min 3hrs 6hrs 12hrs 1day 3days 7days]
+        raise ArgumentError, "Invalid range format: #{range_str}. Valid formats: #{valid_ranges.join(", ")}"
+      end
+
+      value = match[1].to_i
+      unit = match[2]
+
+      case unit
+      when /^min/
+        value * 60
+      when /^hr/, /^hour/
+        value * 60 * 60
+      when /^day/
+        value * 24 * 60 * 60
+      else
+        raise ArgumentError, "Unknown time unit: #{unit}"
+      end
+    end
+
+    # Calculate from/to times based on a range string
+    #
+    # @param range [String, nil] Time range string (e.g., "30min", "1day", "3days")
+    # @param to [String, nil] End time in ISO 8601 format (defaults to now if not provided)
+    # @return [Hash] Hash with :from and :to as ISO 8601 strings
+    def self.calculate_range(range:, to: nil)
+      return {from: nil, to: to} if range.nil? || range.empty?
+
+      end_time = to ? parse_time(to) : Time.now.utc
+      duration_seconds = parse_range(range)
+      start_time = end_time - duration_seconds
+
+      {
+        from: format_time(start_time),
+        to: format_time(end_time)
       }
     end
   end

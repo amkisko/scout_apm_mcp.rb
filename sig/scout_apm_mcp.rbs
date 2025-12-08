@@ -16,7 +16,6 @@ module ScoutApmMcp
     def list_metrics: (Integer app_id) -> Hash[String, untyped]
     def get_metric: (Integer app_id, String metric_type, ?from: String?, ?to: String?) -> Hash[String, untyped]
     def list_endpoints: (Integer app_id, ?from: String?, ?to: String?) -> Hash[String, untyped]
-    def get_endpoint: (Integer app_id, String endpoint_id) -> Hash[String, untyped]
     def get_endpoint_metrics: (Integer app_id, String endpoint_id, String metric_type, ?from: String?, ?to: String?) -> Hash[String, untyped]
     def list_endpoint_traces: (Integer app_id, String endpoint_id, ?from: String?, ?to: String?) -> Hash[String, untyped]
     def fetch_trace: (Integer app_id, Integer trace_id) -> Hash[String, untyped]
