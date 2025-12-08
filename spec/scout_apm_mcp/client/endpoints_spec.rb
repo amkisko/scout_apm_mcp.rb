@@ -12,7 +12,7 @@ RSpec.describe ScoutApmMcp::Client do
       app_id = 123
       # Default behavior now includes 7-day range, so we need to stub with query params
       stub_request(:get, /https:\/\/scoutapm\.com\/api\/v0\/apps\/#{app_id}\/endpoints/)
-        .with(headers: {"X-SCOUT-API" => api_key, "Accept" => "application/json", "User-Agent" => "scout-apm-mcp-rb/0.1.3"})
+        .with(headers: {"X-SCOUT-API" => api_key, "Accept" => "application/json", "User-Agent" => "scout-apm-mcp-rb/#{ScoutApmMcp::VERSION}"})
         .to_return(status: 200, body: '{"results": [{"id": 1, "name": "/test"}]}')
 
       result = client.list_endpoints(app_id)
@@ -24,7 +24,7 @@ RSpec.describe ScoutApmMcp::Client do
       from = "2025-01-01T00:00:00Z"
       to = "2025-01-02T00:00:00Z"
       stub_request(:get, "https://scoutapm.com/api/v0/apps/#{app_id}/endpoints?from=#{CGI.escape(from)}&to=#{CGI.escape(to)}")
-        .with(headers: {"X-SCOUT-API" => api_key, "Accept" => "application/json", "User-Agent" => "scout-apm-mcp-rb/0.1.3"})
+        .with(headers: {"X-SCOUT-API" => api_key, "Accept" => "application/json", "User-Agent" => "scout-apm-mcp-rb/#{ScoutApmMcp::VERSION}"})
         .to_return(status: 200, body: '{"results": []}')
 
       result = client.list_endpoints(app_id, from: from, to: to)
@@ -44,7 +44,7 @@ RSpec.describe ScoutApmMcp::Client do
       app_id = 123
       to_time = "2025-01-15T12:00:00Z"
       stub_request(:get, /https:\/\/scoutapm\.com\/api\/v0\/apps\/#{app_id}\/endpoints/)
-        .with(headers: {"X-SCOUT-API" => api_key, "Accept" => "application/json", "User-Agent" => "scout-apm-mcp-rb/0.1.3"})
+        .with(headers: {"X-SCOUT-API" => api_key, "Accept" => "application/json", "User-Agent" => "scout-apm-mcp-rb/#{ScoutApmMcp::VERSION}"})
         .to_return(status: 200, body: '{"results": []}')
 
       result = client.list_endpoints(app_id, range: "1day", to: to_time)
@@ -59,7 +59,7 @@ RSpec.describe ScoutApmMcp::Client do
       metric_type = "response_time"
       encoded_id = CGI.escape(endpoint_id)
       stub_request(:get, "https://scoutapm.com/api/v0/apps/#{app_id}/endpoints/#{encoded_id}/metrics/#{metric_type}")
-        .with(headers: {"X-SCOUT-API" => api_key, "Accept" => "application/json", "User-Agent" => "scout-apm-mcp-rb/0.1.3"})
+        .with(headers: {"X-SCOUT-API" => api_key, "Accept" => "application/json", "User-Agent" => "scout-apm-mcp-rb/#{ScoutApmMcp::VERSION}"})
         .to_return(status: 200, body: '{"results": {"series": {"response_time": [[1234567890, 100.5]]}}}')
 
       result = client.get_endpoint_metrics(app_id, endpoint_id, metric_type)
@@ -74,7 +74,7 @@ RSpec.describe ScoutApmMcp::Client do
       to = "2025-01-02T00:00:00Z"
       encoded_id = CGI.escape(endpoint_id)
       url = "https://scoutapm.com/api/v0/apps/#{app_id}/endpoints/#{encoded_id}/metrics/#{metric_type}?from=#{CGI.escape(from)}&to=#{CGI.escape(to)}"
-      stub_request(:get, url).with(headers: {"X-SCOUT-API" => api_key, "Accept" => "application/json", "User-Agent" => "scout-apm-mcp-rb/0.1.3"}).to_return(status: 200, body: '{"results": {"series": {}}}')
+      stub_request(:get, url).with(headers: {"X-SCOUT-API" => api_key, "Accept" => "application/json", "User-Agent" => "scout-apm-mcp-rb/#{ScoutApmMcp::VERSION}"}).to_return(status: 200, body: '{"results": {"series": {}}}')
 
       result = client.get_endpoint_metrics(app_id, endpoint_id, metric_type, from: from, to: to)
       expect(result).to eq([])
@@ -94,7 +94,7 @@ RSpec.describe ScoutApmMcp::Client do
       metric_type = "response_time"
       to_time = "2025-01-15T12:00:00Z"
       stub_request(:get, /https:\/\/scoutapm\.com\/api\/v0\/apps\/#{app_id}\/endpoints\/#{endpoint_id}\/metrics\/#{metric_type}/)
-        .with(headers: {"X-SCOUT-API" => api_key, "Accept" => "application/json", "User-Agent" => "scout-apm-mcp-rb/0.1.3"})
+        .with(headers: {"X-SCOUT-API" => api_key, "Accept" => "application/json", "User-Agent" => "scout-apm-mcp-rb/#{ScoutApmMcp::VERSION}"})
         .to_return(status: 200, body: '{"results": {"series": {"response_time": []}}}')
 
       result = client.get_endpoint_metrics(app_id, endpoint_id, metric_type, range: "6hrs", to: to_time)
@@ -108,7 +108,7 @@ RSpec.describe ScoutApmMcp::Client do
       endpoint_id = "test-endpoint-id"
       encoded_id = CGI.escape(endpoint_id)
       stub_request(:get, "https://scoutapm.com/api/v0/apps/#{app_id}/endpoints/#{encoded_id}/traces")
-        .with(headers: {"X-SCOUT-API" => api_key, "Accept" => "application/json", "User-Agent" => "scout-apm-mcp-rb/0.1.3"})
+        .with(headers: {"X-SCOUT-API" => api_key, "Accept" => "application/json", "User-Agent" => "scout-apm-mcp-rb/#{ScoutApmMcp::VERSION}"})
         .to_return(status: 200, body: '{"results": {"traces": [{"id": 1}]}}')
 
       result = client.list_endpoint_traces(app_id, endpoint_id)
@@ -123,7 +123,7 @@ RSpec.describe ScoutApmMcp::Client do
       to = Time.now.utc.strftime("%Y-%m-%dT%H:%M:%SZ")
       encoded_id = CGI.escape(endpoint_id)
       stub_request(:get, "https://scoutapm.com/api/v0/apps/#{app_id}/endpoints/#{encoded_id}/traces?from=#{CGI.escape(from)}&to=#{CGI.escape(to)}")
-        .with(headers: {"X-SCOUT-API" => api_key, "Accept" => "application/json", "User-Agent" => "scout-apm-mcp-rb/0.1.3"})
+        .with(headers: {"X-SCOUT-API" => api_key, "Accept" => "application/json", "User-Agent" => "scout-apm-mcp-rb/#{ScoutApmMcp::VERSION}"})
         .to_return(status: 200, body: '{"results": {"traces": []}}')
 
       result = client.list_endpoint_traces(app_id, endpoint_id, from: from, to: to)
@@ -135,7 +135,7 @@ RSpec.describe ScoutApmMcp::Client do
       endpoint_id = "test-endpoint-id"
       to_time = "2025-12-08T11:51:42Z"
       stub_request(:get, /https:\/\/scoutapm\.com\/api\/v0\/apps\/#{app_id}\/endpoints\/#{endpoint_id}\/traces/)
-        .with(headers: {"X-SCOUT-API" => api_key, "Accept" => "application/json", "User-Agent" => "scout-apm-mcp-rb/0.1.3"})
+        .with(headers: {"X-SCOUT-API" => api_key, "Accept" => "application/json", "User-Agent" => "scout-apm-mcp-rb/#{ScoutApmMcp::VERSION}"})
         .to_return(status: 200, body: '{"results": {"traces": []}}')
 
       result = client.list_endpoint_traces(app_id, endpoint_id, range: "12hrs", to: to_time)
