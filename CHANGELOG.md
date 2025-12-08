@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## 0.1.4 (2025-12-08)
+
+- Enhanced API client and documentation for improved endpoint management
+- Refactored RSpec test suite with improved organization and clarity (split into focused spec files by component)
+- Added RuboCop configuration (replacing Standard) with custom rules for RSpec and strict linting
+- Updated trunk configuration to use RuboCop instead of Standard
+- Added Code of Conduct, Governance, and Security Guidelines documents
+- Updated MCP server configuration to use `gem exec` command with Ruby version specification
+- Updated GitHub Actions workflow dependencies
+- Updated bundler dependencies for improved compatibility
+
 ## 0.1.3 (2025-11-21)
 
 - Custom exception classes (`ScoutApmMcp::Error`, `ScoutApmMcp::AuthError`, `ScoutApmMcp::APIError`) for better error handling
