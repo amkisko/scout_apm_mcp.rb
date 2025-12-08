@@ -27,8 +27,12 @@ module ScoutApmMcp
 
     # @param api_key [String] ScoutAPM API key
     # @param api_base [String] API base URL (default: https://scoutapm.com/api/v0)
+    # @raise [ArgumentError] if api_key is nil or empty
     def initialize(api_key:, api_base: API_BASE)
-      @api_key = api_key
+      if api_key.nil? || api_key.to_s.strip.empty?
+        raise ArgumentError, "API key is required and cannot be nil or empty"
+      end
+      @api_key = api_key.to_s
       @api_base = api_base
       @user_agent = "scout-apm-mcp-rb/#{VERSION}"
     end
@@ -42,7 +46,6 @@ module ScoutApmMcp
       response = make_request(uri)
       apps = response.dig("results", "apps") || []
 
-      # Filter by active_since if provided
       if active_since
         active_time = Helpers.parse_time(active_since)
         apps = apps.select do |app|
@@ -84,8 +87,15 @@ module ScoutApmMcp
     # @param metric_type [String] Metric type (apdex, response_time, response_time_95th, errors, throughput, queue_time)
     # @param from [String, nil] Start time in ISO 8601 format
     # @param to [String, nil] End time in ISO 8601 format
+    # @param range [String, nil] Quick time range (e.g., "30min", "1day", "3days", "7days"). If provided, calculates from/to automatically.
     # @return [Hash] Hash containing metric series data
-    def get_metric(app_id, metric_type, from: nil, to: nil)
+    def get_metric(app_id, metric_type, from: nil, to: nil, range: nil)
+      if range
+        calculated = Helpers.calculate_range(range: range, to: to)
+        from = calculated[:from]
+        to = calculated[:to]
+      end
+
       validate_metric_params(metric_type, from, to)
       uri = URI("#{@api_base}/apps/#{app_id}/metrics/#{metric_type}")
       uri.query = build_query_string(from: from, to: to)
@@ -98,25 +108,32 @@ module ScoutApmMcp
     # @param app_id [Integer] ScoutAPM application ID
     # @param from [String, nil] Start time in ISO 8601 format
     # @param to [String, nil] End time in ISO 8601 format
+    # @param range [String, nil] Quick time range (e.g., "30min", "1day", "3days", "7days"). If provided, calculates from/to automatically.
     # @return [Array<Hash>] Array of endpoint hashes
-    def list_endpoints(app_id, from: nil, to: nil)
+    def list_endpoints(app_id, from: nil, to: nil, range: nil)
+      if from.nil? && to.nil? && range.nil?
+        range = "7days"
+      end
+
+      if range
+        calculated = Helpers.calculate_range(range: range, to: to)
+        from = calculated[:from]
+        to = calculated[:to]
+      end
+
+      now = Time.now.utc
+      if from.nil? && to
+        calculated = Helpers.calculate_range(range: "7days", to: to)
+        from = calculated[:from]
+      elsif from && to.nil?
+        to = Helpers.format_time(now)
+      end
+
       validate_time_range(from, to) if from && to
       uri = URI("#{@api_base}/apps/#{app_id}/endpoints")
       uri.query = build_query_string(from: from, to: to)
       response = make_request(uri)
       response["results"] || []
-    end
-
-    # Get endpoint details
-    #
-    # @param app_id [Integer] ScoutAPM application ID
-    # @param endpoint_id [String] Endpoint ID (base64 URL-encoded)
-    # @return [Hash] Endpoint details hash
-    def get_endpoint(app_id, endpoint_id)
-      encoded_endpoint_id = URI.encode_www_form_component(endpoint_id)
-      uri = URI("#{@api_base}/apps/#{app_id}/endpoints/#{encoded_endpoint_id}")
-      response = make_request(uri)
-      response.dig("results", "endpoint") || response["results"] || {}
     end
 
     # Get metric data for a specific endpoint
@@ -126,11 +143,18 @@ module ScoutApmMcp
     # @param metric_type [String] Metric type (apdex, response_time, response_time_95th, errors, throughput, queue_time)
     # @param from [String, nil] Start time in ISO 8601 format
     # @param to [String, nil] End time in ISO 8601 format
+    # @param range [String, nil] Quick time range (e.g., "30min", "1day", "3days", "7days"). If provided, calculates from/to automatically.
     # @return [Array] Array of metric data points for the specified metric type
-    def get_endpoint_metrics(app_id, endpoint_id, metric_type, from: nil, to: nil)
+    def get_endpoint_metrics(app_id, endpoint_id, metric_type, from: nil, to: nil, range: nil)
+      if range
+        calculated = Helpers.calculate_range(range: range, to: to)
+        from = calculated[:from]
+        to = calculated[:to]
+      end
+
       validate_metric_params(metric_type, from, to)
-      encoded_endpoint_id = URI.encode_www_form_component(endpoint_id)
-      uri = URI("#{@api_base}/apps/#{app_id}/endpoints/#{encoded_endpoint_id}/metrics/#{metric_type}")
+      uri = URI(@api_base)
+      uri.path = File.join(uri.path, "apps", app_id.to_s, "endpoints", endpoint_id, "metrics", metric_type)
       uri.query = build_query_string(from: from, to: to)
       response = make_request(uri)
       series = response.dig("results", "series") || {}
@@ -143,19 +167,25 @@ module ScoutApmMcp
     # @param endpoint_id [String] Endpoint ID (base64 URL-encoded)
     # @param from [String, nil] Start time in ISO 8601 format
     # @param to [String, nil] End time in ISO 8601 format
+    # @param range [String, nil] Quick time range (e.g., "30min", "1day", "3days", "7days"). If provided, calculates from/to automatically.
     # @return [Array<Hash>] Array of trace hashes
-    def list_endpoint_traces(app_id, endpoint_id, from: nil, to: nil)
+    def list_endpoint_traces(app_id, endpoint_id, from: nil, to: nil, range: nil)
+      if range
+        calculated = Helpers.calculate_range(range: range, to: to)
+        from = calculated[:from]
+        to = calculated[:to]
+      end
+
       validate_time_range(from, to) if from && to
       if from && to
-        # Validate that from_time is not older than 7 days
         from_time = Helpers.parse_time(from)
         seven_days_ago = Time.now.utc - (7 * 24 * 60 * 60)
         if from_time < seven_days_ago
           raise ArgumentError, "from_time cannot be older than 7 days"
         end
       end
-      encoded_endpoint_id = URI.encode_www_form_component(endpoint_id)
-      uri = URI("#{@api_base}/apps/#{app_id}/endpoints/#{encoded_endpoint_id}/traces")
+      uri = URI(@api_base)
+      uri.path = File.join(uri.path, "apps", app_id.to_s, "endpoints", endpoint_id, "traces")
       uri.query = build_query_string(from: from, to: to)
       response = make_request(uri)
       response.dig("results", "traces") || []
@@ -370,7 +400,6 @@ module ScoutApmMcp
       response = http.request(request)
       response_data = handle_response_errors(response)
 
-      # Check for API-level errors in response body
       if response_data.is_a?(Hash)
         header = response_data["header"]
         if header && header["status"]
@@ -391,21 +420,17 @@ module ScoutApmMcp
       raise Error, "Request failed: #{e.class} - #{e.message}"
     end
 
-    # Handle common response errors and parse JSON
-    #
     # @param response [Net::HTTPResponse] HTTP response object
     # @return [Hash, Array] Parsed JSON response
     # @raise [AuthError] When authentication fails
     # @raise [APIError] When the API returns an error response
     def handle_response_errors(response)
-      # Try to parse JSON response
       begin
         data = JSON.parse(response.body)
       rescue JSON::ParserError
         raise APIError.new("Invalid JSON response: #{response.body}", status_code: response.code.to_i)
       end
 
-      # Check for HTTP-level errors
       case response
       when Net::HTTPSuccess
         data

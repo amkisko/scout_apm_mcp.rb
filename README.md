@@ -261,9 +261,10 @@ api_key = ScoutApmMcp::Helpers.get_api_key(
 ### Endpoints
 
 - `list_endpoints(app_id, from:, to:)` - List all endpoints
-- `get_endpoint(app_id, endpoint_id)` - Get endpoint details
 - `get_endpoint_metrics(app_id, endpoint_id, metric_type, from:, to:)` - Get endpoint metrics
 - `list_endpoint_traces(app_id, endpoint_id, from:, to:)` - List endpoint traces
+
+Note: The API doesn't provide a direct endpoint detail endpoint. Use `list_endpoints` and filter by endpoint_id to get specific endpoint information.
 
 ### Traces
 
