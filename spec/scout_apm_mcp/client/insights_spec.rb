@@ -11,7 +11,7 @@ RSpec.describe ScoutApmMcp::Client do
     it "makes a GET request to /apps/:app_id/insights and returns insights hash" do
       app_id = 123
       stub_request(:get, "https://scoutapm.com/api/v0/apps/#{app_id}/insights")
-        .with(headers: {"X-SCOUT-API" => api_key, "Accept" => "application/json", "User-Agent" => "scout-apm-mcp-rb/0.1.3"})
+        .with(headers: {"X-SCOUT-API" => api_key, "Accept" => "application/json", "User-Agent" => "scout-apm-mcp-rb/#{ScoutApmMcp::VERSION}"})
         .to_return(status: 200, body: '{"results": {"n_plus_one": {"count": 5}}}')
 
       result = client.get_all_insights(app_id)
@@ -22,7 +22,7 @@ RSpec.describe ScoutApmMcp::Client do
       app_id = 123
       limit = 50
       stub_request(:get, "https://scoutapm.com/api/v0/apps/#{app_id}/insights?limit=#{limit}")
-        .with(headers: {"X-SCOUT-API" => api_key, "Accept" => "application/json", "User-Agent" => "scout-apm-mcp-rb/0.1.3"})
+        .with(headers: {"X-SCOUT-API" => api_key, "Accept" => "application/json", "User-Agent" => "scout-apm-mcp-rb/#{ScoutApmMcp::VERSION}"})
         .to_return(status: 200, body: '{"results": {}}')
 
       result = client.get_all_insights(app_id, limit: limit)
@@ -35,7 +35,7 @@ RSpec.describe ScoutApmMcp::Client do
       app_id = 123
       insight_type = "n_plus_one"
       stub_request(:get, "https://scoutapm.com/api/v0/apps/#{app_id}/insights/#{insight_type}")
-        .with(headers: {"X-SCOUT-API" => api_key, "Accept" => "application/json", "User-Agent" => "scout-apm-mcp-rb/0.1.3"})
+        .with(headers: {"X-SCOUT-API" => api_key, "Accept" => "application/json", "User-Agent" => "scout-apm-mcp-rb/#{ScoutApmMcp::VERSION}"})
         .to_return(status: 200, body: '{"results": {"count": 5}}')
 
       result = client.get_insight_by_type(app_id, insight_type)
@@ -47,7 +47,7 @@ RSpec.describe ScoutApmMcp::Client do
       insight_type = "n_plus_one"
       limit = 50
       stub_request(:get, "https://scoutapm.com/api/v0/apps/#{app_id}/insights/#{insight_type}?limit=#{limit}")
-        .with(headers: {"X-SCOUT-API" => api_key, "Accept" => "application/json", "User-Agent" => "scout-apm-mcp-rb/0.1.3"})
+        .with(headers: {"X-SCOUT-API" => api_key, "Accept" => "application/json", "User-Agent" => "scout-apm-mcp-rb/#{ScoutApmMcp::VERSION}"})
         .to_return(status: 200, body: '{"results": {}}')
 
       result = client.get_insight_by_type(app_id, insight_type, limit: limit)

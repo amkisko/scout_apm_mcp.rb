@@ -10,7 +10,7 @@ RSpec.describe ScoutApmMcp::Client do
   describe "#fetch_openapi_schema" do
     it "makes a GET request to the OpenAPI schema endpoint" do
       stub_request(:get, "https://scoutapm.com/api/v0/openapi.yaml")
-        .with(headers: {"X-SCOUT-API" => api_key, "User-Agent" => "scout-apm-mcp-rb/0.1.3", "Accept" => "application/x-yaml, application/yaml, text/yaml, */*"})
+        .with(headers: {"X-SCOUT-API" => api_key, "User-Agent" => "scout-apm-mcp-rb/#{ScoutApmMcp::VERSION}", "Accept" => "application/x-yaml, application/yaml, text/yaml, */*"})
         .to_return(status: 200, body: "openapi: 3.0.0\n", headers: {"Content-Type" => "application/x-yaml"})
 
       result = client.fetch_openapi_schema

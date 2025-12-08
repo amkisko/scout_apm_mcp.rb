@@ -12,7 +12,7 @@ RSpec.describe ScoutApmMcp::Client do
       app_id = 123
       trace_id = 456
       stub_request(:get, "https://scoutapm.com/api/v0/apps/#{app_id}/traces/#{trace_id}")
-        .with(headers: {"X-SCOUT-API" => api_key, "Accept" => "application/json", "User-Agent" => "scout-apm-mcp-rb/0.1.3"})
+        .with(headers: {"X-SCOUT-API" => api_key, "Accept" => "application/json", "User-Agent" => "scout-apm-mcp-rb/#{ScoutApmMcp::VERSION}"})
         .to_return(status: 200, body: '{"results": {"trace": {"id": 456, "spans": []}}}')
 
       result = client.fetch_trace(app_id, trace_id)

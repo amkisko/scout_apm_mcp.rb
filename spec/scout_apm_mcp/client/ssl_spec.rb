@@ -22,7 +22,7 @@ RSpec.describe ScoutApmMcp::Client do
       ENV["SSL_CERT_FILE"] = cert_file
 
       stub_request(:get, "https://scoutapm.com/api/v0/apps")
-        .with(headers: {"X-SCOUT-API" => api_key, "Accept" => "application/json", "User-Agent" => "scout-apm-mcp-rb/0.1.3"})
+        .with(headers: {"X-SCOUT-API" => api_key, "Accept" => "application/json", "User-Agent" => "scout-apm-mcp-rb/#{ScoutApmMcp::VERSION}"})
         .to_return(status: 200, body: '{"results": {"apps": []}}')
 
       result = client.list_apps
@@ -37,7 +37,7 @@ RSpec.describe ScoutApmMcp::Client do
       allow(File).to receive(:exist?).with(OpenSSL::X509::DEFAULT_CERT_FILE).and_return(true)
 
       stub_request(:get, "https://scoutapm.com/api/v0/apps")
-        .with(headers: {"X-SCOUT-API" => api_key, "Accept" => "application/json", "User-Agent" => "scout-apm-mcp-rb/0.1.3"})
+        .with(headers: {"X-SCOUT-API" => api_key, "Accept" => "application/json", "User-Agent" => "scout-apm-mcp-rb/#{ScoutApmMcp::VERSION}"})
         .to_return(status: 200, body: '{"results": {"apps": []}}')
 
       result = client.list_apps
