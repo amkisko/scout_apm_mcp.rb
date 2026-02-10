@@ -237,10 +237,14 @@ module ScoutApmMcp
     # @param to [String, nil] End time in ISO 8601 format (defaults to now if not provided)
     # @return [Hash] Hash with :from and :to as ISO 8601 strings
     def self.calculate_range(range:, to: nil)
-      return {from: nil, to: to} if range.nil? || range.empty?
+      return {from: nil, to: to} if range.nil? || range.to_s.strip.empty?
+
+      # Normalize: MCP clients may pass integer (e.g. 7) instead of "7days"
+      range_str = range.to_s.strip
+      range_str = "#{range_str}days" if range_str.match?(/\A\d+\z/)
 
       end_time = to ? parse_time(to) : Time.now.utc
-      duration_seconds = parse_range(range)
+      duration_seconds = parse_range(range_str)
       start_time = end_time - duration_seconds
 
       {
