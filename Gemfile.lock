@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    scout_apm_mcp (0.1.4)
+    scout_apm_mcp (0.1.5)
       base64 (~> 0.3)
       fast-mcp (>= 0.1, < 2.0)
       opdotenv (~> 1.0)
@@ -117,7 +117,11 @@ GEM
       logger
       mime-types-data (~> 3.2025, >= 3.2025.0507)
     mime-types-data (3.2025.0924)
+    mini_portile2 (2.8.9)
     minitest (5.26.2)
+    nokogiri (1.18.10)
+      mini_portile2 (~> 2.8.2)
+      racc (~> 1.4)
     nokogiri (1.18.10-arm64-darwin)
       racc (~> 1.4)
     nokogiri (1.18.10-x86_64-linux-gnu)
@@ -259,7 +263,7 @@ GEM
       concurrent-ruby (~> 1.0)
     unicode-display_width (3.2.0)
       unicode-emoji (~> 4.1)
-    unicode-emoji (4.1.0)
+    unicode-emoji (4.2.0)
     uri (1.1.1)
     useragent (0.16.11)
     webmock (3.26.1)
