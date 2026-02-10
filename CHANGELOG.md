@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 0.1.5 (2026-02-10)
+
+- Fix range handling in calculate_range method
+
 ## 0.1.4 (2025-12-08)
 
 - Enhanced API client and documentation for improved endpoint management
