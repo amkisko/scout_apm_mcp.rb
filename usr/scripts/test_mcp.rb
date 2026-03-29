@@ -1,6 +1,4 @@
 #!/usr/bin/env ruby
-# frozen_string_literal: true
-
 # Test script for MCP server
 # This script sends JSON-RPC messages to test the MCP server
 

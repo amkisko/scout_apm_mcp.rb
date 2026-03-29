@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 0.1.6 (2026-03-29)
+
+- Background jobs API support: `list_jobs`, `list_job_metrics`, `get_job_metrics`, `list_job_traces` on the client, matching MCP tools, and URL parsing / `FetchScoutURLTool` handling for job and job-trace links.
+- Refreshed bundled OpenAPI fixture from Scout’s live schema (includes jobs paths).
+- Extracted MCP JSON-RPC error-id monkey patch into `lib/scout_apm_mcp/mcp_error_id_patch.rb` (excluded from coverage metrics).
+- Expanded test suite: `Server.start`, `NullLogger`, batch tool dispatch, `FetchScoutURLTool` / `FetchOpenAPISchemaTool` branches, and list endpoints/jobs timeframe edge cases
+
 ## 0.1.5 (2026-02-10)
 
 - Fix range handling in calculate_range method

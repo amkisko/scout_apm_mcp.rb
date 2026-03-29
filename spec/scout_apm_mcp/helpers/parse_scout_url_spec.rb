@@ -41,6 +41,44 @@ RSpec.describe ScoutApmMcp::Helpers do
       end
     end
 
+    it "parses a ScoutAPM job URL correctly" do
+      job_id = Base64.urlsafe_encode64("default/MyWorker")
+      url = "https://scoutapm.com/apps/123/jobs/#{job_id}"
+      result = described_class.parse_scout_url(url)
+
+      aggregate_failures do
+        expect(result[:app_id]).to eq(123)
+        expect(result[:url_type]).to eq(:job)
+        expect(result[:job_id]).to eq(job_id)
+        expect(result[:decoded_job]).to eq("default/MyWorker")
+      end
+    end
+
+    it "treats job URLs with a bare /trace segment as a job listing" do
+      job_id = Base64.urlsafe_encode64("default/MyWorker")
+      url = "https://scoutapm.com/apps/123/jobs/#{job_id}/trace"
+      result = described_class.parse_scout_url(url)
+
+      aggregate_failures do
+        expect(result[:url_type]).to eq(:job)
+        expect(result[:job_id]).to eq(job_id)
+      end
+    end
+
+    it "parses a ScoutAPM job trace URL correctly" do
+      job_id = Base64.urlsafe_encode64("default/MyWorker")
+      url = "https://scoutapm.com/apps/123/jobs/#{job_id}/trace/999"
+      result = described_class.parse_scout_url(url)
+
+      aggregate_failures do
+        expect(result[:app_id]).to eq(123)
+        expect(result[:url_type]).to eq(:job_trace)
+        expect(result[:job_id]).to eq(job_id)
+        expect(result[:trace_id]).to eq(999)
+        expect(result[:decoded_job]).to eq("default/MyWorker")
+      end
+    end
+
     it "parses a ScoutAPM endpoint URL correctly" do
       endpoint_id = Base64.urlsafe_encode64("Controller/Test/POST/TestController/test_action")
       url = "https://scoutapm.com/apps/123/endpoints/#{endpoint_id}"

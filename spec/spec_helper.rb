@@ -5,6 +5,7 @@ require "simplecov_json_formatter"
 SimpleCov.start do
   track_files "{lib,app}/**/*.rb"
   add_filter "/lib/scout_apm_mcp/version.rb"
+  add_filter "/lib/scout_apm_mcp/mcp_error_id_patch.rb"
   add_filter "/lib/tasks/"
   add_filter "/spec/"
   formatter SimpleCov::Formatter::MultiFormatter.new([
@@ -12,6 +13,8 @@ SimpleCov.start do
     SimpleCov::Formatter::CoberturaFormatter,
     SimpleCov::Formatter::JSONFormatter
   ])
+
+  minimum_coverage 95
 end
 
 require "rspec"
