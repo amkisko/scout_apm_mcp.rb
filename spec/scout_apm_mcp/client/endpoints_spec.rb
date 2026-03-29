@@ -1,5 +1,6 @@
 require "spec_helper"
 require "cgi"
+require "uri"
 
 RSpec.describe ScoutApmMcp::Client do
   include ScoutApmMcp
@@ -49,6 +50,28 @@ RSpec.describe ScoutApmMcp::Client do
 
       result = client.list_endpoints(app_id, range: "1day", to: to_time)
       expect(result).to eq([])
+    end
+
+    it "derives from as 7 days before a provided to when from is omitted" do
+      app_id = 456
+      to_time = "2025-06-01T15:00:00Z"
+      calculated_from = ScoutApmMcp::Helpers.calculate_range(range: "7days", to: to_time)[:from]
+      stub_request(:get, "https://scoutapm.com/api/v0/apps/#{app_id}/endpoints?from=#{CGI.escape(calculated_from)}&to=#{CGI.escape(to_time)}")
+        .to_return(status: 200, body: '{"results": []}')
+
+      expect(client.list_endpoints(app_id, to: to_time)).to eq([])
+    end
+
+    it "defaults to to: now when only from is provided" do
+      app_id = 789
+      from = (Time.now.utc - 3600).strftime("%Y-%m-%dT%H:%M:%SZ")
+      to_rx = /\A\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\z/
+      stub_request(:get, /https:\/\/scoutapm\.com\/api\/v0\/apps\/#{app_id}\/endpoints\?from=.*&to=.*$/).with { |req|
+        q = URI.decode_www_form(URI(req.uri).query.to_s).to_h
+        q["from"] == from && q["to"].to_s.match?(to_rx)
+      }.to_return(status: 200, body: '{"results": []}')
+
+      expect(client.list_endpoints(app_id, from: from)).to eq([])
     end
   end
 
@@ -133,8 +156,10 @@ RSpec.describe ScoutApmMcp::Client do
     it "uses range parameter to calculate from/to" do
       app_id = 123
       endpoint_id = "test-endpoint-id"
-      to_time = "2025-12-08T11:51:42Z"
-      stub_request(:get, /https:\/\/scoutapm\.com\/api\/v0\/apps\/#{app_id}\/endpoints\/#{endpoint_id}\/traces/)
+      to_time = Time.now.utc.strftime("%Y-%m-%dT%H:%M:%SZ")
+      calculated = ScoutApmMcp::Helpers.calculate_range(range: "12hrs", to: to_time)
+      encoded_id = CGI.escape(endpoint_id)
+      stub_request(:get, "https://scoutapm.com/api/v0/apps/#{app_id}/endpoints/#{encoded_id}/traces?from=#{CGI.escape(calculated[:from])}&to=#{CGI.escape(calculated[:to])}")
         .with(headers: {"X-SCOUT-API" => api_key, "Accept" => "application/json", "User-Agent" => "scout-apm-mcp-rb/#{ScoutApmMcp::VERSION}"})
         .to_return(status: 200, body: '{"results": {"traces": []}}')
 

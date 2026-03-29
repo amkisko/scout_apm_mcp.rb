@@ -1,5 +1,3 @@
-# frozen_string_literal: true
-
 require "spec_helper"
 require "scout_apm_mcp/server"
 require "scout_apm_mcp/server/shared_contexts"
@@ -31,6 +29,21 @@ RSpec.describe ScoutApmMcp::Server do
         expect(io_as_json["jsonrpc"]).to eq("2.0")
         expect(io_as_json["result"]["content"]).to be_an(Array)
         expect(mock_client).to have_received(:list_endpoints).with(123, hash_including(from: anything, to: anything))
+        expect(io_as_json["id"]).to eq(1)
+      end
+    end
+
+    it "calls list_jobs with default timeframe" do
+      allow(mock_client).to receive(:list_jobs).and_return([{"name" => "Worker", "job_id" => "x"}])
+
+      request = {jsonrpc: "2.0", method: "tools/call", params: {name: "ScoutApmMcpServerListJobsTool", arguments: {app_id: 123}}, id: 1}
+      io_response = with_captured_stdout { server.handle_request(JSON.generate(request)) }
+      io_as_json = parse_response(io_response)
+
+      aggregate_failures do
+        expect(io_as_json["jsonrpc"]).to eq("2.0")
+        expect(io_as_json["result"]["content"]).to be_an(Array)
+        expect(mock_client).to have_received(:list_jobs).with(123, hash_including(from: anything, to: anything))
         expect(io_as_json["id"]).to eq(1)
       end
     end

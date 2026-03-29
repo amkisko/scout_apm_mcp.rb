@@ -1,5 +1,3 @@
-# frozen_string_literal: true
-
 RSpec.shared_context "with server integration" do
   let(:server) do
     FastMcp::Server.new(

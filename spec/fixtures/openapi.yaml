@@ -181,6 +181,106 @@ paths:
         '422':
           $ref: '#/components/responses/UnprocessableEntity'
 
+  /apps/{id}/jobs:
+    get:
+      summary: List background jobs
+      description: Returns a list of all background jobs for the application with performance metrics
+      operationId: listJobs
+      tags:
+        - Jobs
+      parameters:
+        - $ref: '#/components/parameters/AppId'
+        - $ref: '#/components/parameters/FromTimestamp'
+        - $ref: '#/components/parameters/ToTimestamp'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobsListResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /apps/{id}/jobs/{job_id}/metrics:
+    get:
+      summary: List available job metrics
+      description: Returns a list of available metric types for background jobs
+      operationId: listJobMetrics
+      tags:
+        - Jobs
+      parameters:
+        - $ref: '#/components/parameters/AppId'
+        - $ref: '#/components/parameters/JobId'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobMetricsListResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /apps/{id}/jobs/{job_id}/metrics/{metric_type}:
+    get:
+      summary: Get job metrics
+      description: Returns metric data for a specific background job
+      operationId: getJobMetrics
+      tags:
+        - Jobs
+      parameters:
+        - $ref: '#/components/parameters/AppId'
+        - $ref: '#/components/parameters/JobId'
+        - $ref: '#/components/parameters/JobMetricType'
+        - $ref: '#/components/parameters/FromTimestamp'
+        - $ref: '#/components/parameters/ToTimestamp'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricDataResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /apps/{id}/jobs/{job_id}/traces:
+    get:
+      summary: List traces for job
+      description: Returns traces for a specific background job (max 100, within 7 days)
+      operationId: listJobTraces
+      tags:
+        - Jobs
+      parameters:
+        - $ref: '#/components/parameters/AppId'
+        - $ref: '#/components/parameters/JobId'
+        - $ref: '#/components/parameters/FromTimestamp'
+        - $ref: '#/components/parameters/ToTimestamp'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobTracesListResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
   /apps/{id}/traces/{trace_id}:
     get:
       summary: Get trace details
@@ -504,7 +604,7 @@ components:
       schema:
         type: string
         format: date-time
-        example: 2025-12-07T12:57:03Z
+        example: 2026-03-28T06:31:38Z
 
     ToTimestamp:
       name: to
@@ -514,8 +614,25 @@ components:
       schema:
         type: string
         format: date-time
-        example: 2025-12-08T12:57:03Z
+        example: 2026-03-29T06:31:38Z
     
+    JobId:
+      name: job_id
+      in: path
+      required: true
+      description: Base64 URL-encoded job identifier (e.g., ZGVmYXVsdC9EdW1teVdvcmtlcg== [default/DummyWorker])
+      schema:
+        type: string
+
+    JobMetricType:
+      name: metric_type
+      in: path
+      required: true
+      description: Type of job metric to retrieve
+      schema:
+        type: string
+        enum: [throughput, execution_time, latency, errors, allocations]
+
     InsightType:
       name: type
       in: path
@@ -691,6 +808,113 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Endpoint'
+      required:
+        - header
+        - results
+
+    Job:
+      type: object
+      properties:
+        full_name:
+          type: string
+          example: "default/DummyWorker"
+        name:
+          type: string
+          example: "DummyWorker"
+        queue:
+          type: string
+          example: "default"
+        job_id:
+          type: string
+          description: Base64 URL-encoded job identifier for use with other endpoints
+        throughput:
+          type: number
+          description: Jobs per minute
+        execution_time:
+          type: number
+          description: Average execution time in milliseconds
+        time_consumed:
+          type: number
+          description: Fraction of total job time consumed by this job
+        latency:
+          type: number
+          description: Average queue latency in seconds
+      required:
+        - full_name
+        - name
+        - queue
+        - throughput
+        - execution_time
+
+    JobsListResponse:
+      type: object
+      properties:
+        header:
+          $ref: '#/components/schemas/StandardHeader'
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Job'
+      required:
+        - header
+        - results
+
+    JobMetricsListResponse:
+      type: object
+      properties:
+        header:
+          $ref: '#/components/schemas/StandardHeader'
+        results:
+          type: object
+          properties:
+            availableMetrics:
+              type: array
+              items:
+                type: string
+                enum: [throughput, execution_time, latency, errors, allocations]
+          required:
+            - availableMetrics
+      required:
+        - header
+        - results
+
+    JobTrace:
+      type: object
+      properties:
+        id:
+          type: integer
+        time:
+          type: string
+          format: date-time
+        duration:
+          type: number
+          description: Execution duration in milliseconds
+        name:
+          type: string
+          description: Job class name
+        queue:
+          type: string
+          description: Queue name
+        metric_name:
+          type: string
+        context:
+          type: object
+          additionalProperties: true
+
+    JobTracesListResponse:
+      type: object
+      properties:
+        header:
+          $ref: '#/components/schemas/StandardHeader'
+        results:
+          type: object
+          properties:
+            traces:
+              type: array
+              items:
+                $ref: '#/components/schemas/JobTrace'
+          required:
+            - traces
       required:
         - header
         - results
@@ -1169,6 +1393,8 @@ tags:
     description: Operations for retrieving application metrics
   - name: Endpoints
     description: Operations for endpoint monitoring
+  - name: Jobs
+    description: Operations for background job monitoring
   - name: Traces
     description: Operations for trace analysis
   - name: Errors

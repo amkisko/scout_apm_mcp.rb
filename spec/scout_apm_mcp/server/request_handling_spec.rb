@@ -1,5 +1,3 @@
-# frozen_string_literal: true
-
 require "spec_helper"
 require "scout_apm_mcp/server"
 require "scout_apm_mcp/server/shared_contexts"
@@ -56,7 +54,15 @@ RSpec.describe ScoutApmMcp::Server do
         expect(io_as_json["jsonrpc"]).to eq("2.0")
         expect(tools).to be_an(Array)
         expect(tools.length).to be > 0
-        expect(tool_names).to include("ScoutApmMcpServerListAppsTool", "ScoutApmMcpServerGetAppTool", "ScoutApmMcpServerParseScoutURLTool")
+        expect(tool_names).to include(
+          "ScoutApmMcpServerListAppsTool",
+          "ScoutApmMcpServerGetAppTool",
+          "ScoutApmMcpServerParseScoutURLTool",
+          "ScoutApmMcpServerListJobsTool",
+          "ScoutApmMcpServerListJobMetricsTool",
+          "ScoutApmMcpServerGetJobMetricsTool",
+          "ScoutApmMcpServerListJobTracesTool"
+        )
         expect(io_as_json["id"]).to eq(1)
       end
     end

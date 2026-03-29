@@ -1,47 +1,12 @@
 #!/usr/bin/env ruby
-# frozen_string_literal: true
-
 require "fast_mcp"
 require "scout_apm_mcp"
 require "logger"
 require "stringio"
-require "securerandom"
+require_relative "mcp_error_id_patch"
 
 # Alias MCP to FastMcp for compatibility
 FastMcp = MCP unless defined?(FastMcp)
-
-# Monkey-patch fast-mcp to ensure error responses always have a valid id
-# JSON-RPC 2.0 allows id: null for notifications, but MCP clients (Cursor/Inspector)
-# use strict Zod validation that requires id to be a string or number
-module MCP
-  module Transports
-    class StdioTransport
-      if method_defined?(:send_error)
-        alias_method :original_send_error, :send_error
-
-        def send_error(code, message, id = nil)
-          # Use placeholder id if nil to satisfy strict MCP client validation
-          # JSON-RPC 2.0 allows null for notifications, but MCP clients require valid id
-          id = "error_#{SecureRandom.hex(8)}" if id.nil?
-          original_send_error(code, message, id)
-        end
-      end
-    end
-  end
-
-  class Server
-    if method_defined?(:send_error)
-      alias_method :original_send_error, :send_error
-
-      def send_error(code, message, id = nil)
-        # Use placeholder id if nil to satisfy strict MCP client validation
-        # JSON-RPC 2.0 allows null for notifications, but MCP clients require valid id
-        id = "error_#{SecureRandom.hex(8)}" if id.nil?
-        original_send_error(code, message, id)
-      end
-    end
-  end
-end
 
 module ScoutApmMcp
   # MCP Server for ScoutAPM integration
@@ -135,6 +100,10 @@ module ScoutApmMcp
       server.register_tool(ListEndpointsTool)
       server.register_tool(GetEndpointMetricsTool)
       server.register_tool(ListEndpointTracesTool)
+      server.register_tool(ListJobsTool)
+      server.register_tool(ListJobMetricsTool)
+      server.register_tool(GetJobMetricsTool)
+      server.register_tool(ListJobTracesTool)
       server.register_tool(FetchTraceTool)
       server.register_tool(ListErrorGroupsTool)
       server.register_tool(GetErrorGroupTool)
@@ -363,6 +332,83 @@ module ScoutApmMcp
       end
     end
 
+    class ListJobsTool < BaseTool
+      description <<~DESC
+        List background jobs for an application with performance metrics (throughput, execution time, etc.).
+
+        Time range: same as ListEndpointsTool — use range and/or from/to. If none are given, defaults to the last 7 days.
+
+        Each job includes a `job_id` (base64) for ListJobMetricsTool, GetJobMetricsTool, and ListJobTracesTool.
+      DESC
+
+      arguments do
+        required(:app_id).filled(:integer).description("ScoutAPM application ID")
+        optional(:range).maybe(:string).description("Quick time range: 30min, 60min, 3hrs, 6hrs, 12hrs, 1day, 3days, 7days")
+        optional(:from).maybe(:string).description("Start time ISO 8601. Ignored if range is provided.")
+        optional(:to).maybe(:string).description("End time ISO 8601; anchor for range if range is provided.")
+      end
+
+      def call(app_id:, range: nil, from: nil, to: nil)
+        get_client.list_jobs(app_id, from: from, to: to, range: range)
+      end
+    end
+
+    class ListJobMetricsTool < BaseTool
+      description "List available metric types for a specific background job (throughput, execution_time, latency, errors, allocations)"
+
+      arguments do
+        required(:app_id).filled(:integer).description("ScoutAPM application ID")
+        required(:job_id).filled(:string).description("Job ID (base64 URL-encoded) from list_jobs results")
+      end
+
+      def call(app_id:, job_id:)
+        get_client.list_job_metrics(app_id, job_id)
+      end
+    end
+
+    class GetJobMetricsTool < BaseTool
+      description <<~DESC
+        Get time-series data for a background job metric.
+
+        Metric types: throughput, execution_time, latency, errors, allocations (not the same set as HTTP endpoint metrics).
+
+        Use range or explicit from/to, same as GetEndpointMetricsTool.
+      DESC
+
+      arguments do
+        required(:app_id).filled(:integer).description("ScoutAPM application ID")
+        required(:job_id).filled(:string).description("Job ID (base64 URL-encoded)")
+        required(:metric_type).filled(:string).description("Job metric: throughput, execution_time, latency, errors, allocations")
+        optional(:range).maybe(:string).description("Quick time range template")
+        optional(:from).maybe(:string).description("Start time ISO 8601. Ignored if range is provided.")
+        optional(:to).maybe(:string).description("End time ISO 8601.")
+      end
+
+      def call(app_id:, job_id:, metric_type:, range: nil, from: nil, to: nil)
+        get_client.get_job_metrics(app_id, job_id, metric_type, from: from, to: to, range: range)
+      end
+    end
+
+    class ListJobTracesTool < BaseTool
+      description <<~DESC
+        List traces for a background job (max 100, within 7 days). Same time constraints as ListEndpointTracesTool.
+
+        Use FetchTraceTool with a trace id from results for full span detail.
+      DESC
+
+      arguments do
+        required(:app_id).filled(:integer).description("ScoutAPM application ID")
+        required(:job_id).filled(:string).description("Job ID (base64 URL-encoded)")
+        optional(:range).maybe(:string).description("Quick time range template")
+        optional(:from).maybe(:string).description("Start time ISO 8601; must be within last 7 days if used with to.")
+        optional(:to).maybe(:string).description("End time ISO 8601.")
+      end
+
+      def call(app_id:, job_id:, range: nil, from: nil, to: nil)
+        get_client.list_job_traces(app_id, job_id, from: from, to: to, range: range)
+      end
+    end
+
     class FetchTraceTool < BaseTool
       description "Fetch detailed trace information from ScoutAPM API"
 
@@ -522,10 +568,12 @@ module ScoutApmMcp
         Useful for extracting IDs before making other API requests.
 
         Returns a hash with:
-        - url_type: :endpoint, :trace, :error_group, :insight, :app, or :unknown
+        - url_type: :endpoint, :trace, :job, :job_trace, :error_group, :insight, :app, or :unknown
         - app_id: Application ID (integer)
         - endpoint_id: Base64 URL-encoded endpoint ID (if present)
+        - job_id: Base64 URL-encoded job ID (if present)
         - trace_id: Trace ID (if present)
+        - decoded_job: Human-readable queue/job name (if job_id present)
         - error_id: Error group ID (if present)
         - insight_type: Insight type (if present)
         - decoded_endpoint: Human-readable endpoint path (if endpoint_id present)
@@ -551,7 +599,9 @@ module ScoutApmMcp
         This tool automatically parses ScoutAPM URLs and fetches the corresponding data.
         Supported URL types:
         - Endpoint URLs: /apps/{app_id}/endpoints/{endpoint_id} (fetches from endpoint list)
+        - Job URLs: /apps/{app_id}/jobs/{job_id} (fetches from job list)
         - Trace URLs: /apps/{app_id}/endpoints/{endpoint_id}/trace/{trace_id}
+        - Job trace URLs: /apps/{app_id}/jobs/{job_id}/trace/{trace_id}
         - Error group URLs: /apps/{app_id}/error_groups/{error_id}
         - Insight URLs: /apps/{app_id}/insights or /apps/{app_id}/insights/{insight_type}
         - App URLs: /apps/{app_id}
@@ -561,12 +611,12 @@ module ScoutApmMcp
         - https://scoutapm.com/apps/123/endpoints/ABC123.../trace/456 (trace)
         - https://scoutapm.com/apps/123/error_groups/789 (error group)
 
-        For trace URLs, set include_endpoint=true to also fetch endpoint context.
+        For endpoint or job trace URLs, set include_endpoint=true to also fetch endpoint or job summary from the last 7 days.
       DESC
 
       arguments do
         required(:url).filled(:string).description("Full ScoutAPM URL")
-        optional(:include_endpoint).filled(:bool).description("For trace URLs, also fetch endpoint details for context (default: false)")
+        optional(:include_endpoint).filled(:bool).description("For trace URLs, also fetch endpoint or job context from recent list (default: false)")
       end
 
       def call(url:, include_endpoint: false)
@@ -603,6 +653,46 @@ module ScoutApmMcp
             end
           else
             raise "Invalid trace URL: missing app_id or trace_id"
+          end
+        when :job_trace
+          if parsed[:app_id] && parsed[:trace_id]
+            trace_data = client.fetch_trace(parsed[:app_id], parsed[:trace_id])
+            result[:data] = {trace: trace_data}
+
+            if include_endpoint && parsed[:job_id]
+              begin
+                jobs = client.list_jobs(parsed[:app_id], range: "7days")
+                job_data = jobs.find { |j| Helpers.get_job_id(j) == parsed[:job_id] }
+
+                if job_data
+                  result[:data][:job] = job_data
+                else
+                  result[:data][:job_error] = "Job not found in the last 7 days"
+                end
+                result[:data][:decoded_job] = parsed[:decoded_job]
+              rescue => e
+                result[:data][:job_error] = "Failed to fetch job: #{e.message}"
+                result[:data][:decoded_job] = parsed[:decoded_job]
+              end
+            end
+          else
+            raise "Invalid job trace URL: missing app_id or trace_id"
+          end
+        when :job
+          if parsed[:app_id] && parsed[:job_id]
+            jobs = client.list_jobs(parsed[:app_id], range: "7days")
+            job_data = jobs.find { |j| Helpers.get_job_id(j) == parsed[:job_id] }
+
+            if job_data
+              result[:data] = {
+                job: job_data,
+                decoded_job: parsed[:decoded_job]
+              }
+            else
+              raise "Job not found in the last 7 days. Try using ListJobsTool with a longer time range."
+            end
+          else
+            raise "Invalid job URL: missing app_id or job_id"
           end
         when :endpoint
           if parsed[:app_id] && parsed[:endpoint_id]

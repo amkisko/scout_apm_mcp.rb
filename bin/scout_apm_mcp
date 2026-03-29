@@ -1,6 +1,4 @@
 #!/usr/bin/env ruby
-# frozen_string_literal: true
-
 # Suppress all output to prevent breaking JSON parsing in MCP clients
 # STDOUT is used for MCP protocol communication (JSON-RPC), so we must not output anything
 # STDERR is also suppressed to prevent any error messages from breaking JSON parsing

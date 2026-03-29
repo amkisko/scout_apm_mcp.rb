@@ -64,7 +64,7 @@ module ScoutApmMcp
     # @param url [String] Full ScoutAPM URL
     # @return [Hash] Hash containing resource type and extracted IDs
     #   Possible keys: :url_type, :app_id, :endpoint_id, :trace_id, :error_id, :insight_type,
-    #   :query_params, :decoded_endpoint
+    #   :job_id, :query_params, :decoded_endpoint, :decoded_job
     def self.parse_scout_url(url)
       uri = URI.parse(url)
       path_parts = uri.path.split("/").reject(&:empty?)
@@ -78,13 +78,31 @@ module ScoutApmMcp
 
       # Detect URL type and extract IDs
       # Pattern: /apps/{app_id}/endpoints/{endpoint_id}/trace/{trace_id}
-      if path_parts.include?("trace")
+      if path_parts.include?("trace") && path_parts.include?("endpoints")
         result[:url_type] = :trace
         endpoints_index = path_parts.index("endpoints")
         trace_index = path_parts.index("trace")
         if endpoints_index && trace_index
           result[:endpoint_id] = path_parts[endpoints_index + 1]
           result[:trace_id] = path_parts[trace_index + 1].to_i
+        end
+      # Pattern: /apps/{app_id}/jobs/{job_id}/trace/{trace_id} or /apps/{app_id}/jobs/{job_id}
+      elsif path_parts.include?("jobs")
+        jobs_index = path_parts.index("jobs")
+        if jobs_index && path_parts[jobs_index + 1]
+          result[:job_id] = path_parts[jobs_index + 1]
+          if path_parts.include?("trace")
+            trace_index = path_parts.index("trace")
+            if trace_index && path_parts[trace_index + 1]
+              result[:url_type] = :job_trace
+              result[:trace_id] = path_parts[trace_index + 1].to_i
+            else
+              result[:url_type] = :job
+            end
+          else
+            result[:url_type] = :job
+          end
+          result[:decoded_job] = decode_endpoint_id(result[:job_id])
         end
       # Pattern: /apps/{app_id}/endpoints/{endpoint_id}
       elsif path_parts.include?("endpoints")
@@ -161,6 +179,14 @@ module ScoutApmMcp
       link.split("/").last || ""
     end
 
+    # Job ID from a job hash returned by the jobs API
+    #
+    # @param job [Hash] Job dictionary from list_jobs
+    # @return [String] job_id for path parameters, or empty string
+    def self.get_job_id(job)
+      job["job_id"] || job[:job_id] || ""
+    end
+
     # Format datetime to ISO 8601 string for API
     #
     # Relies on UTC timezone. Converts the time to UTC if it's not already.
@@ -226,8 +252,10 @@ module ScoutApmMcp
         value * 60 * 60
       when /^day/
         value * 24 * 60 * 60
+        # :nocov:
       else
         raise ArgumentError, "Unknown time unit: #{unit}"
+        # :nocov:
       end
     end
 

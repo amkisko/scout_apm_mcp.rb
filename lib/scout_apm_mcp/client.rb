@@ -25,6 +25,9 @@ module ScoutApmMcp
     # Valid insight types
     VALID_INSIGHTS = %w[n_plus_one memory_bloat slow_query].freeze
 
+    # Valid job metric types (distinct from application endpoint metrics)
+    VALID_JOB_METRICS = %w[throughput execution_time latency errors allocations].freeze
+
     # @param api_key [String] ScoutAPM API key
     # @param api_base [String] API base URL (default: https://scoutapm.com/api/v0)
     # @raise [ArgumentError] if api_key is nil or empty
@@ -186,6 +189,106 @@ module ScoutApmMcp
       end
       uri = URI(@api_base)
       uri.path = File.join(uri.path, "apps", app_id.to_s, "endpoints", endpoint_id, "traces")
+      uri.query = build_query_string(from: from, to: to)
+      response = make_request(uri)
+      response.dig("results", "traces") || []
+    end
+
+    # List background jobs for an application
+    #
+    # @param app_id [Integer] ScoutAPM application ID
+    # @param from [String, nil] Start time in ISO 8601 format
+    # @param to [String, nil] End time in ISO 8601 format
+    # @param range [String, nil] Quick time range (e.g., "30min", "1day", "3days", "7days"). If provided, calculates from/to automatically.
+    # @return [Array<Hash>] Array of job hashes
+    def list_jobs(app_id, from: nil, to: nil, range: nil)
+      if from.nil? && to.nil? && range.nil?
+        range = "7days"
+      end
+
+      if range
+        calculated = Helpers.calculate_range(range: range, to: to)
+        from = calculated[:from]
+        to = calculated[:to]
+      end
+
+      now = Time.now.utc
+      if from.nil? && to
+        calculated = Helpers.calculate_range(range: "7days", to: to)
+        from = calculated[:from]
+      elsif from && to.nil?
+        to = Helpers.format_time(now)
+      end
+
+      validate_time_range(from, to) if from && to
+      uri = URI("#{@api_base}/apps/#{app_id}/jobs")
+      uri.query = build_query_string(from: from, to: to)
+      response = make_request(uri)
+      response["results"] || []
+    end
+
+    # List available metric types for a background job
+    #
+    # @param app_id [Integer] ScoutAPM application ID
+    # @param job_id [String] Job ID (base64 URL-encoded, as returned by list_jobs)
+    # @return [Array<String>] Metric type names
+    def list_job_metrics(app_id, job_id)
+      uri = URI(@api_base)
+      uri.path = File.join(uri.path, "apps", app_id.to_s, "jobs", job_id, "metrics")
+      response = make_request(uri)
+      response.dig("results", "availableMetrics") || []
+    end
+
+    # Get time-series data for a job metric
+    #
+    # @param app_id [Integer] ScoutAPM application ID
+    # @param job_id [String] Job ID (base64 URL-encoded)
+    # @param metric_type [String] One of throughput, execution_time, latency, errors, allocations
+    # @param from [String, nil] Start time in ISO 8601 format
+    # @param to [String, nil] End time in ISO 8601 format
+    # @param range [String, nil] Quick time range; if provided, calculates from/to automatically.
+    # @return [Array] Data points for the metric
+    def get_job_metrics(app_id, job_id, metric_type, from: nil, to: nil, range: nil)
+      if range
+        calculated = Helpers.calculate_range(range: range, to: to)
+        from = calculated[:from]
+        to = calculated[:to]
+      end
+
+      validate_job_metric_params(metric_type, from, to)
+      uri = URI(@api_base)
+      uri.path = File.join(uri.path, "apps", app_id.to_s, "jobs", job_id, "metrics", metric_type)
+      uri.query = build_query_string(from: from, to: to)
+      response = make_request(uri)
+      series = response.dig("results", "series") || {}
+      series[metric_type] || []
+    end
+
+    # List traces for a background job (max 100, within 7 days)
+    #
+    # @param app_id [Integer] ScoutAPM application ID
+    # @param job_id [String] Job ID (base64 URL-encoded)
+    # @param from [String, nil] Start time in ISO 8601 format
+    # @param to [String, nil] End time in ISO 8601 format
+    # @param range [String, nil] Quick time range; if provided, calculates from/to automatically.
+    # @return [Array<Hash>] Array of trace hashes
+    def list_job_traces(app_id, job_id, from: nil, to: nil, range: nil)
+      if range
+        calculated = Helpers.calculate_range(range: range, to: to)
+        from = calculated[:from]
+        to = calculated[:to]
+      end
+
+      validate_time_range(from, to) if from && to
+      if from && to
+        from_time = Helpers.parse_time(from)
+        seven_days_ago = Time.now.utc - (7 * 24 * 60 * 60)
+        if from_time < seven_days_ago
+          raise ArgumentError, "from_time cannot be older than 7 days"
+        end
+      end
+      uri = URI(@api_base)
+      uri.path = File.join(uri.path, "apps", app_id.to_s, "jobs", job_id, "traces")
       uri.query = build_query_string(from: from, to: to)
       response = make_request(uri)
       response.dig("results", "traces") || []
@@ -456,6 +559,13 @@ module ScoutApmMcp
     def validate_metric_params(metric_type, from, to)
       unless VALID_METRICS.include?(metric_type)
         raise ArgumentError, "Invalid metric_type. Must be one of: #{VALID_METRICS.join(", ")}"
+      end
+      validate_time_range(from, to) if from && to
+    end
+
+    def validate_job_metric_params(metric_type, from, to)
+      unless VALID_JOB_METRICS.include?(metric_type)
+        raise ArgumentError, "Invalid metric_type. Must be one of: #{VALID_JOB_METRICS.join(", ")}"
       end
       validate_time_range(from, to) if from && to
     end
