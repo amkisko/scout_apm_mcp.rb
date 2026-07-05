@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## Unreleased
+
+## 0.2.0 (2026-07-05)
+
+- Add `list_anomaly_events` and `get_anomaly_event` client methods and MCP tools.
+- Add `sort_by`, `limit`, and `offset` to `list_endpoints` for paginated endpoint listings.
+- Return extracted `results` from `get_insights_history` and `get_insights_history_by_type`; validate `insight_type` on history-by-type requests.
+- Retry transient ScoutAPM GET failures (5xx and network timeouts) with bounded exponential backoff.
+- Fix `FetchTraceTool` `include_endpoint` so `trace_metric_name` is read from the extracted trace payload.
+- Fix MCP JSON-RPC error responses for strict MCP clients.
+- Reuse one ScoutAPM API client per MCP server process instead of creating a client per tool call.
+
 ## 0.1.6 (2026-03-29)
 
 - Background jobs API support: `list_jobs`, `list_job_metrics`, `get_job_metrics`, `list_job_traces` on the client, matching MCP tools, and URL parsing / `FetchScoutURLTool` handling for job and job-trace links.

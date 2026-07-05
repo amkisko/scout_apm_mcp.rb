@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    scout_apm_mcp (0.1.6)
+    scout_apm_mcp (0.2.0)
       base64 (~> 0.3)
       fast-mcp (>= 0.1, < 2.0)
       opdotenv (~> 1.0)
@@ -117,11 +117,7 @@ GEM
       logger
       mime-types-data (~> 3.2025, >= 3.2025.0507)
     mime-types-data (3.2025.0924)
-    mini_portile2 (2.8.9)
     minitest (5.26.2)
-    nokogiri (1.18.10)
-      mini_portile2 (~> 2.8.2)
-      racc (~> 1.4)
     nokogiri (1.18.10-arm64-darwin)
       racc (~> 1.4)
     nokogiri (1.18.10-x86_64-linux-gnu)
@@ -132,6 +128,7 @@ GEM
     parser (3.3.10.0)
       ast (~> 2.4.1)
       racc
+    polyrun (1.5.0)
     pp (0.6.3)
       prettyprint
     prettyprint (0.2.0)
@@ -279,6 +276,7 @@ PLATFORMS
 DEPENDENCIES
   appraisal (~> 2.5)
   memory_profiler (~> 1.1)
+  polyrun (~> 1.5.0)
   rake (~> 13.3)
   rbs (~> 3.9)
   rspec (~> 3.13)

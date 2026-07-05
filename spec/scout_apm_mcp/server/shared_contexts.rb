@@ -10,6 +10,7 @@ RSpec.shared_context "with server integration" do
   let(:transport) { FastMcp::Transports::StdioTransport.new(server) }
 
   before do
+    described_class.instance_variable_set(:@api_client, nil)
     described_class.register_tools(server)
     server.instance_variable_set(:@transport, transport)
     allow(ScoutApmMcp::Helpers).to receive(:get_api_key).and_return("test-api-key")

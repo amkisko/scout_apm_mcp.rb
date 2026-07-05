@@ -1,20 +1,16 @@
-require "simplecov"
-require "simplecov-cobertura"
-require "simplecov_json_formatter"
+polyrun_cov_measure =
+  ENV["POLYRUN_COVERAGE_DISABLE"] != "1" &&
+  %w[1 true yes].include?(ENV["POLYRUN_COVERAGE"]&.to_s&.downcase)
 
-SimpleCov.start do
-  track_files "{lib,app}/**/*.rb"
-  add_filter "/lib/scout_apm_mcp/version.rb"
-  add_filter "/lib/scout_apm_mcp/mcp_error_id_patch.rb"
-  add_filter "/lib/tasks/"
-  add_filter "/spec/"
-  formatter SimpleCov::Formatter::MultiFormatter.new([
-    SimpleCov::Formatter::HTMLFormatter,
-    SimpleCov::Formatter::CoberturaFormatter,
-    SimpleCov::Formatter::JSONFormatter
-  ])
+if polyrun_cov_measure
+  require "coverage"
+  branch = %w[1 true yes].include?(ENV["POLYRUN_COVERAGE_BRANCHES"]&.to_s&.downcase)
+  ::Coverage.start(lines: true, branches: branch)
+end
 
-  minimum_coverage 95
+if polyrun_cov_measure
+  require "polyrun/coverage/rails"
+  Polyrun::Coverage::Rails.start!(root: File.expand_path("..", __dir__))
 end
 
 require "rspec"
@@ -28,3 +24,6 @@ RSpec.configure do |config|
     c.syntax = :expect
   end
 end
+require "polyrun/rspec"
+Polyrun::RSpec.install_failure_fragments!
+

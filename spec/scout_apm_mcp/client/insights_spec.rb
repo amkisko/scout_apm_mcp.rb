@@ -70,7 +70,7 @@ RSpec.describe ScoutApmMcp::Client do
         .to_return(status: 200, body: '{"results": []}')
 
       result = client.get_insights_history(app_id)
-      expect(result).to eq({"results" => []})
+      expect(result).to eq([])
     end
 
     it "does not include query string when all parameters are nil" do
@@ -81,7 +81,7 @@ RSpec.describe ScoutApmMcp::Client do
 
       params = {from: nil, to: nil, limit: nil, pagination_cursor: nil, pagination_direction: nil, pagination_page: nil}
       result = client.get_insights_history(app_id, **params)
-      expect(result).to eq({"results" => []})
+      expect(result).to eq([])
     end
 
     it "includes pagination parameters when provided" do
@@ -91,7 +91,7 @@ RSpec.describe ScoutApmMcp::Client do
       stub_request(:get, "https://scoutapm.com/api/v0/apps/#{app_id}/insights/history?#{query}").with(headers: {"X-SCOUT-API" => api_key, "Accept" => "application/json"}).to_return(status: 200, body: '{"results": []}')
 
       result = client.get_insights_history(app_id, **params)
-      expect(result).to eq({"results" => []})
+      expect(result).to eq([])
     end
   end
 
@@ -104,7 +104,13 @@ RSpec.describe ScoutApmMcp::Client do
         .to_return(status: 200, body: '{"results": []}')
 
       result = client.get_insights_history_by_type(app_id, insight_type)
-      expect(result).to eq({"results" => []})
+      expect(result).to eq([])
+    end
+
+    it "validates insight type" do
+      expect {
+        client.get_insights_history_by_type(123, "invalid_insight")
+      }.to raise_error(ArgumentError, /Invalid insight_type/)
     end
 
     it "does not include query string when all parameters are nil" do
@@ -116,7 +122,7 @@ RSpec.describe ScoutApmMcp::Client do
 
       params = {from: nil, to: nil, limit: nil, pagination_cursor: nil, pagination_direction: nil, pagination_page: nil}
       result = client.get_insights_history_by_type(app_id, insight_type, **params)
-      expect(result).to eq({"results" => []})
+      expect(result).to eq([])
     end
 
     it "includes pagination parameters when provided" do
@@ -127,7 +133,7 @@ RSpec.describe ScoutApmMcp::Client do
       stub_request(:get, "https://scoutapm.com/api/v0/apps/#{app_id}/insights/history/#{insight_type}?#{query}").with(headers: {"X-SCOUT-API" => api_key, "Accept" => "application/json"}).to_return(status: 200, body: '{"results": []}')
 
       result = client.get_insights_history_by_type(app_id, insight_type, **params)
-      expect(result).to eq({"results" => []})
+      expect(result).to eq([])
     end
   end
 end
