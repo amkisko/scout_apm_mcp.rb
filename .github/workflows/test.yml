@@ -21,6 +21,8 @@ jobs:
             ruby_version: "3.1"
           - gemfile: ruby34
             ruby_version: "3.4"
+          - gemfile: ruby40
+            ruby_version: "4.0"
     
     env:
       BUNDLE_GEMFILE: ${{ github.workspace }}/gemfiles/${{ matrix.gemfile }}.gemfile
