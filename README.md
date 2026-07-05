@@ -4,12 +4,6 @@
 
 Ruby gem providing ScoutAPM API client and MCP (Model Context Protocol) server tools for fetching traces, endpoints, metrics, errors, and insights. Integrates with MCP-compatible clients like Cursor IDE, Claude Desktop, and other MCP-enabled tools.
 
-Sponsored by [Kisko Labs](https://www.kiskolabs.com).
-
-<a href="https://www.kiskolabs.com">
-  <img src="kisko.svg" width="200" alt="Sponsored by Kisko Labs" />
-</a>
-
 ## Requirements
 
 - **Ruby 3.1 or higher** (Ruby 3.0 and earlier are not supported)
@@ -378,3 +372,10 @@ If you discover a security vulnerability, please report it responsibly. See [SEC
 
 The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
 
+## Sponsors
+
+Sponsored by [Kisko Labs](https://www.kiskolabs.com).
+
+<a href="https://www.kiskolabs.com">
+  <img src="kisko.svg" width="200" alt="Sponsored by Kisko Labs" />
+</a>
