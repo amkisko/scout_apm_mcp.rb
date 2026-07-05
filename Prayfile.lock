@@ -1,0 +1,189 @@
+prayfile_lock = "1"
+spec = "0.1"
+generated_by = "pray 0.1.0"
+manifest_hash = "sha256:a6b9b9815155b798b204df95ae9ed41c229ff3e3898979c91af9bdace180ea28"
+
+[[source]]
+name = "amkisko"
+kind = "git"
+url = "git+https://github.com/amkisko/prayers"
+
+[[package]]
+name = "amkisko/branch-naming"
+version = "1.0.0"
+source = "amkisko"
+path = "./.pray/cache/registry/b8d017fcbbef17e3/amkisko/branch-naming/1.0.0"
+tree_hash = "sha256:f50538e28a0e4d573884c019210ce4cc650f692b2211802520e267ff18f30e9b"
+artifact_hash = "sha256:f50538e28a0e4d573884c019210ce4cc650f692b2211802520e267ff18f30e9b"
+artifact = "path:./.pray/cache/registry/b8d017fcbbef17e3/amkisko/branch-naming/1.0.0"
+exports = ["branch-naming"]
+dependencies = []
+
+[[package]]
+name = "amkisko/changelog-update"
+version = "1.0.0"
+source = "amkisko"
+path = "./.pray/cache/registry/19400ea19f8a784e/amkisko/changelog-update/1.0.0"
+tree_hash = "sha256:59f60347608d35d7cdc76ecd7bfbc2a2164a9ffff765393588349fa8a27bc195"
+artifact_hash = "sha256:59f60347608d35d7cdc76ecd7bfbc2a2164a9ffff765393588349fa8a27bc195"
+artifact = "path:./.pray/cache/registry/19400ea19f8a784e/amkisko/changelog-update/1.0.0"
+exports = ["skill"]
+dependencies = []
+
+[[package]]
+name = "amkisko/engineering-audit"
+version = "1.0.0"
+source = "amkisko"
+path = "./.pray/cache/registry/02d30c5d148fc85b/amkisko/engineering-audit/1.0.0"
+tree_hash = "sha256:5e221fe8161748661cf171adc31968e6f4a9ac5ae010e74ec188c5e81885d456"
+artifact_hash = "sha256:5e221fe8161748661cf171adc31968e6f4a9ac5ae010e74ec188c5e81885d456"
+artifact = "path:./.pray/cache/registry/02d30c5d148fc85b/amkisko/engineering-audit/1.0.0"
+exports = ["skill"]
+dependencies = []
+
+[[package]]
+name = "amkisko/finite-state-machines"
+version = "1.0.0"
+source = "amkisko"
+path = "./.pray/cache/registry/25606293863724f7/amkisko/finite-state-machines/1.0.0"
+tree_hash = "sha256:86c27f8702620a790011c5ea31a244df38da6e35ff4aa76b5fbdddedc0e56101"
+artifact_hash = "sha256:86c27f8702620a790011c5ea31a244df38da6e35ff4aa76b5fbdddedc0e56101"
+artifact = "path:./.pray/cache/registry/25606293863724f7/amkisko/finite-state-machines/1.0.0"
+exports = ["finite-state-machines"]
+dependencies = []
+
+[[package]]
+name = "amkisko/getting-started"
+version = "1.0.0"
+source = "amkisko"
+path = "./.pray/cache/registry/cb4b41cc197d34aa/amkisko/getting-started/1.0.0"
+tree_hash = "sha256:61432f6125fc9eef9e6781dd9116f125ca8e02e9e13d55313125c27cc2e35df1"
+artifact_hash = "sha256:61432f6125fc9eef9e6781dd9116f125ca8e02e9e13d55313125c27cc2e35df1"
+artifact = "path:./.pray/cache/registry/cb4b41cc197d34aa/amkisko/getting-started/1.0.0"
+exports = ["getting-started"]
+dependencies = []
+
+[[package]]
+name = "amkisko/minimal-implementation"
+version = "1.0.0"
+source = "amkisko"
+path = "./.pray/cache/registry/8ed6734a990cd535/amkisko/minimal-implementation/1.0.0"
+tree_hash = "sha256:e3e38bafa9bb022d5c3b1b0e3f904bab958b660fbcc22ff41140e6dc5e3537f7"
+artifact_hash = "sha256:e3e38bafa9bb022d5c3b1b0e3f904bab958b660fbcc22ff41140e6dc5e3537f7"
+artifact = "path:./.pray/cache/registry/8ed6734a990cd535/amkisko/minimal-implementation/1.0.0"
+exports = ["minimal-implementation"]
+dependencies = []
+
+[[package]]
+name = "amkisko/working-rules"
+version = "1.0.0"
+source = "amkisko"
+path = "./.pray/cache/registry/94e3c46c8f3e6421/amkisko/working-rules/1.0.0"
+tree_hash = "sha256:070a5431f32a86577ed860ab8d1d0a5f86142b2d2fc1fde1a064c1799926a114"
+artifact_hash = "sha256:070a5431f32a86577ed860ab8d1d0a5f86142b2d2fc1fde1a064c1799926a114"
+artifact = "path:./.pray/cache/registry/94e3c46c8f3e6421/amkisko/working-rules/1.0.0"
+exports = ["working-rules"]
+dependencies = []
+
+[[package]]
+name = "amkisko/writing-prose"
+version = "1.0.0"
+source = "amkisko"
+path = "./.pray/cache/registry/c0921d41a2ecaccb/amkisko/writing-prose/1.0.0"
+tree_hash = "sha256:58dfe61ecbba7953209370f141cec17f23110220b7b29a628c1183002bac5973"
+artifact_hash = "sha256:58dfe61ecbba7953209370f141cec17f23110220b7b29a628c1183002bac5973"
+artifact = "path:./.pray/cache/registry/c0921d41a2ecaccb/amkisko/writing-prose/1.0.0"
+exports = ["writing-prose"]
+dependencies = []
+
+[[target]]
+name = "agents"
+outputs = ["AGENTS.md"]
+
+[[managed_span]]
+id = "7317586a"
+target = "AGENTS.md"
+open_line = 10
+close_line = 30
+ideal_checksum = "sha256:84171d8d31bd90000e5e5e7e3d38105a72f1fdb840745b3b5d321e6bea7736c4"
+package = "amkisko/branch-naming"
+export = "branch-naming"
+source_checksum = "sha256:f50538e28a0e4d573884c019210ce4cc650f692b2211802520e267ff18f30e9b"
+silenced = false
+
+[[managed_span]]
+id = "889f4e4f"
+target = "AGENTS.md"
+open_line = 32
+close_line = 92
+ideal_checksum = "sha256:17705c37d17e77780dd3c51260bdf86afe67c008c129d0b7dcd1179779736019"
+package = "amkisko/changelog-update"
+export = "skill"
+source_checksum = "sha256:59f60347608d35d7cdc76ecd7bfbc2a2164a9ffff765393588349fa8a27bc195"
+silenced = false
+
+[[managed_span]]
+id = "c711ab37"
+target = "AGENTS.md"
+open_line = 94
+close_line = 115
+ideal_checksum = "sha256:30e6415fbb91c1df6cca0185b830801b910392dda68970a38144bf507c117ca3"
+package = "amkisko/engineering-audit"
+export = "skill"
+source_checksum = "sha256:5e221fe8161748661cf171adc31968e6f4a9ac5ae010e74ec188c5e81885d456"
+silenced = false
+
+[[managed_span]]
+id = "2b9051df"
+target = "AGENTS.md"
+open_line = 117
+close_line = 122
+ideal_checksum = "sha256:d6d50ec67564585d84bf1e51b616beb17953da7562c78471d4f460c191678d6f"
+package = "amkisko/finite-state-machines"
+export = "finite-state-machines"
+source_checksum = "sha256:86c27f8702620a790011c5ea31a244df38da6e35ff4aa76b5fbdddedc0e56101"
+silenced = false
+
+[[managed_span]]
+id = "5f23b29e"
+target = "AGENTS.md"
+open_line = 124
+close_line = 155
+ideal_checksum = "sha256:e66bf6f3e4681c4e3a4f627a95b5ede012cc37e34b3042a048c4d9fecc1baa24"
+package = "amkisko/getting-started"
+export = "getting-started"
+source_checksum = "sha256:61432f6125fc9eef9e6781dd9116f125ca8e02e9e13d55313125c27cc2e35df1"
+silenced = false
+
+[[managed_span]]
+id = "b2a3d4d7"
+target = "AGENTS.md"
+open_line = 157
+close_line = 186
+ideal_checksum = "sha256:ee04ff26b9949efe86e603943ea0eddb78575f7c0358c92889545574442f1dfb"
+package = "amkisko/minimal-implementation"
+export = "minimal-implementation"
+source_checksum = "sha256:e3e38bafa9bb022d5c3b1b0e3f904bab958b660fbcc22ff41140e6dc5e3537f7"
+silenced = false
+
+[[managed_span]]
+id = "5ef025d3"
+target = "AGENTS.md"
+open_line = 188
+close_line = 203
+ideal_checksum = "sha256:07b448d5f06a4f201d66b47346057490d07c20ea20f65a76099a98f9bfd4f55a"
+package = "amkisko/working-rules"
+export = "working-rules"
+source_checksum = "sha256:070a5431f32a86577ed860ab8d1d0a5f86142b2d2fc1fde1a064c1799926a114"
+silenced = false
+
+[[managed_span]]
+id = "c7597e52"
+target = "AGENTS.md"
+open_line = 205
+close_line = 210
+ideal_checksum = "sha256:4bdfcc6144261bedbb0a6b15dbde3dfd6def4cab06b95962cbcbf19de113d5b5"
+package = "amkisko/writing-prose"
+export = "writing-prose"
+source_checksum = "sha256:58dfe61ecbba7953209370f141cec17f23110220b7b29a628c1183002bac5973"
+silenced = false

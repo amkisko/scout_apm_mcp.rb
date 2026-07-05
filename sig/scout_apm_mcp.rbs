@@ -12,13 +12,13 @@ module ScoutApmMcp
     def initialize: (api_key: String, ?api_base: String) -> void
     def build_http_client: (URI uri) -> Net::HTTP
 
-    def list_apps: () -> Hash[String, untyped]
+    def list_apps: (?active_since: String?) -> Array[untyped]
     def get_app: (Integer app_id) -> Hash[String, untyped]
     def list_metrics: (Integer app_id) -> Hash[String, untyped]
     def get_metric: (Integer app_id, String metric_type, ?from: String?, ?to: String?) -> Hash[String, untyped]
-    def list_endpoints: (Integer app_id, ?from: String?, ?to: String?) -> Hash[String, untyped]
+    def list_endpoints: (Integer app_id, ?from: String?, ?to: String?, ?range: String?, ?sort_by: String?, ?limit: Integer?, ?offset: Integer?) -> (Array[untyped] | Hash[String, untyped])
     def get_endpoint_metrics: (Integer app_id, String endpoint_id, String metric_type, ?from: String?, ?to: String?) -> Hash[String, untyped]
-    def list_endpoint_traces: (Integer app_id, String endpoint_id, ?from: String?, ?to: String?) -> Hash[String, untyped]
+    def list_endpoint_traces: (Integer app_id, String endpoint_id, ?from: String?, ?to: String?, ?range: String?) -> Array[untyped]
     def list_jobs: (Integer app_id, ?from: String?, ?to: String?, ?range: String?) -> untyped
     def list_job_metrics: (Integer app_id, String job_id) -> untyped
     def get_job_metrics: (Integer app_id, String job_id, String metric_type, ?from: String?, ?to: String?, ?range: String?) -> untyped
@@ -27,6 +27,8 @@ module ScoutApmMcp
     def list_error_groups: (Integer app_id, ?from: String?, ?to: String?, ?endpoint: String?) -> Hash[String, untyped]
     def get_error_group: (Integer app_id, Integer error_id) -> Hash[String, untyped]
     def get_error_group_errors: (Integer app_id, Integer error_id) -> Hash[String, untyped]
+    def list_anomaly_events: (Integer app_id, ?from: String?, ?to: String?, ?range: String?, ?state: String?, ?metric: String?, ?endpoint: String?) -> Array[untyped]
+    def get_anomaly_event: (Integer app_id, Integer anomaly_event_id) -> Hash[String, untyped]
     def get_all_insights: (Integer app_id, ?limit: Integer?) -> Hash[String, untyped]
     def get_insight_by_type: (Integer app_id, String insight_type, ?limit: Integer?) -> Hash[String, untyped]
     def get_insights_history: (Integer app_id, ?from: String?, ?to: String?, ?limit: Integer?, ?pagination_cursor: Integer?, ?pagination_direction: String?, ?pagination_page: Integer?) -> Hash[String, untyped]

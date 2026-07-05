@@ -1,6 +1,7 @@
 require "uri"
 require "base64"
 require "time"
+require "open3"
 
 module ScoutApmMcp
   # Helper module for API key management, URL parsing, and time utilities
@@ -13,6 +14,15 @@ module ScoutApmMcp
     # @param op_field [String] 1Password field name (default: "API_KEY")
     # @return [String] API key
     # @raise [RuntimeError] if API key cannot be found
+    def self.read_op_secret(reference)
+      stdout, _stderr, status = Open3.capture3("op", "read", reference)
+      return stdout.strip if status.success? && !stdout.strip.empty?
+
+      nil
+    rescue
+      nil
+    end
+
     def self.get_api_key(api_key: nil, op_vault: nil, op_item: nil, op_field: "API_KEY")
       return api_key if api_key && !api_key.empty?
 
@@ -25,7 +35,7 @@ module ScoutApmMcp
           if op_env_entry_path =~ %r{op://([^/]+)/(.+)}
             vault = Regexp.last_match(1)
             item = Regexp.last_match(2)
-            api_key = `op read "op://#{vault}/#{item}/#{op_field}" 2>/dev/null`.strip
+            api_key = read_op_secret("op://#{vault}/#{item}/#{op_field}")
             return api_key if api_key && !api_key.empty?
           end
         rescue
@@ -48,7 +58,7 @@ module ScoutApmMcp
 
         # Try direct 1Password CLI
         begin
-          api_key = `op read "op://#{op_vault}/#{op_item}/#{op_field}" 2>/dev/null`.strip
+          api_key = read_op_secret("op://#{op_vault}/#{op_item}/#{op_field}")
           return api_key if api_key && !api_key.empty?
         rescue
         end

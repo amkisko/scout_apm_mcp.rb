@@ -38,6 +38,7 @@ Gem::Specification.new do |spec|
   spec.add_runtime_dependency "opdotenv", "~> 1.0"
 
   spec.add_development_dependency "rspec", "~> 3.13"
+  spec.add_development_dependency "polyrun", "~> 1.5.0"
   spec.add_development_dependency "webmock", "~> 3.26"
   spec.add_development_dependency "rake", "~> 13.3"
   spec.add_development_dependency "simplecov", "~> 0.22"

@@ -26,6 +26,8 @@ RSpec.describe ScoutApmMcp::Server, "#handle_request" do
       list_error_groups: [],
       get_error_group: {},
       get_error_group_errors: [],
+      list_anomaly_events: [],
+      get_anomaly_event: {},
       get_all_insights: {},
       get_insight_by_type: {},
       get_insights_history: {},
@@ -66,6 +68,8 @@ RSpec.describe ScoutApmMcp::Server, "#handle_request" do
       "ScoutApmMcpServerListErrorGroupsTool" => {app_id: 1},
       "ScoutApmMcpServerGetErrorGroupTool" => {app_id: 1, error_id: 2},
       "ScoutApmMcpServerGetErrorGroupErrorsTool" => {app_id: 1, error_id: 2},
+      "ScoutApmMcpServerListAnomalyEventsTool" => {app_id: 1, range: "7days"},
+      "ScoutApmMcpServerGetAnomalyEventTool" => {app_id: 1, anomaly_event_id: 3},
       "ScoutApmMcpServerGetAllInsightsTool" => {app_id: 1},
       "ScoutApmMcpServerGetInsightByTypeTool" => {app_id: 1, insight_type: "n_plus_one"},
       "ScoutApmMcpServerGetInsightsHistoryTool" => {app_id: 1},
@@ -75,7 +79,7 @@ RSpec.describe ScoutApmMcp::Server, "#handle_request" do
       "ScoutApmMcpServerFetchOpenAPISchemaTool" => {validate: true, compare_with_local: false}
     }
 
-    deep_trace = {"results" => {"trace" => {"metric_name" => "Worker#perform"}}}
+    deep_trace = {"metric_name" => "Worker#perform"}
     allow(mock_client).to receive(:fetch_trace).and_return(deep_trace)
 
     aggregate_failures do
@@ -86,6 +90,10 @@ RSpec.describe ScoutApmMcp::Server, "#handle_request" do
         expect(res["error"]).to be_nil, -> { "tool #{tool_name} failed: #{res.inspect}" }
         expect(res.dig("result", "content")).to be_an(Array), -> { "tool #{tool_name} missing content: #{res.inspect}" }
       end
+
+      trace_res = call_tool("ScoutApmMcpServerFetchTraceTool", {app_id: 1, trace_id: 9, include_endpoint: true})
+      expect(trace_res.dig("result", "content", 0, "text")).to include("trace_metric_name")
+      expect(trace_res.dig("result", "content", 0, "text")).to include("Worker#perform")
     end
   end
 end

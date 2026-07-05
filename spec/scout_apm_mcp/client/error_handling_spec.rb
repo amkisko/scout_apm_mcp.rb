@@ -8,6 +8,49 @@ RSpec.describe ScoutApmMcp::Client do
   let(:client) { described_class.new(api_key: api_key) }
 
   describe "error handling" do
+    before do
+      allow(client).to receive(:sleep)
+    end
+
+    describe "request retries" do
+      let(:request_uri) { URI("https://scoutapm.com/api/v0/apps") }
+
+      it "retries retryable API errors before succeeding" do
+        attempts = 0
+        allow(client).to receive(:perform_request).with(request_uri) do
+          attempts += 1
+          raise ScoutApmMcp::APIError.new("Unavailable", status_code: 503) if attempts == 1
+
+          {"results" => {"apps" => [{"id" => 1}]}}
+        end
+
+        expect(client.send(:make_request, request_uri)).to eq({"results" => {"apps" => [{"id" => 1}]}})
+        expect(attempts).to eq(2)
+        expect(client).to have_received(:sleep).once
+      end
+
+      it "retries timeout errors before succeeding" do
+        attempts = 0
+        allow(client).to receive(:perform_request).with(request_uri) do
+          attempts += 1
+          raise Timeout::Error, "execution expired" if attempts == 1
+
+          {"results" => {"apps" => []}}
+        end
+
+        expect(client.send(:make_request, request_uri)).to eq({"results" => {"apps" => []}})
+        expect(attempts).to eq(2)
+        expect(client).to have_received(:sleep).once
+      end
+
+      it "does not retry authentication failures" do
+        allow(client).to receive(:perform_request).and_raise(ScoutApmMcp::AuthError.new("Authentication failed"))
+
+        expect { client.send(:make_request, request_uri) }.to raise_error(ScoutApmMcp::AuthError)
+        expect(client).not_to have_received(:sleep)
+      end
+    end
+
     it "raises AuthError on 401 Unauthorized" do
       stub_request(:get, "https://scoutapm.com/api/v0/apps")
         .to_return(status: 401, body: '{"error": "Unauthorized"}')
@@ -43,24 +86,18 @@ RSpec.describe ScoutApmMcp::Client do
       expect { client.list_apps }.to raise_error(ScoutApmMcp::Error, /SSL verification failed/)
     end
 
-    it "handles generic request errors" do
-      stub_request(:get, "https://scoutapm.com/api/v0/apps")
-        .to_raise(Errno::ECONNREFUSED.new("Connection refused"))
+    it "gives up after the retry limit for connection errors" do
+      allow(client).to receive(:perform_request).and_raise(Errno::ECONNREFUSED.new("Connection refused"))
 
       expect { client.list_apps }.to raise_error(ScoutApmMcp::Error, /Request failed/)
+      expect(client).to have_received(:sleep).twice
     end
 
-    it "handles other non-SSL, non-Error exceptions" do
-      http_client = instance_double(Net::HTTP)
-      allow(Net::HTTP).to receive(:new).and_return(http_client)
-      allow(http_client).to receive(:read_timeout=)
-      allow(http_client).to receive(:open_timeout=)
-      allow(http_client).to receive(:use_ssl=)
-      allow(http_client).to receive(:verify_mode=)
-      allow(http_client).to receive(:ca_file=)
-      allow(http_client).to receive(:request).and_raise(Timeout::Error.new("Request timeout"))
+    it "gives up after the retry limit for timeouts" do
+      allow(client).to receive(:perform_request).and_raise(Timeout::Error.new("Request timeout"))
 
       expect { client.list_apps }.to raise_error(ScoutApmMcp::Error, /Request failed/)
+      expect(client).to have_received(:sleep).twice
     end
 
     it "handles invalid JSON response" do

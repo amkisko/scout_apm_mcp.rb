@@ -73,6 +73,29 @@ RSpec.describe ScoutApmMcp::Client do
 
       expect(client.list_endpoints(app_id, from: from)).to eq([])
     end
+
+    it "returns paginated results when sort_by is provided" do
+      app_id = 123
+      from = "2025-01-01T00:00:00Z"
+      to = "2025-01-02T00:00:00Z"
+      stub_request(:get, "https://scoutapm.com/api/v0/apps/#{app_id}/endpoints?from=#{CGI.escape(from)}&to=#{CGI.escape(to)}&sort_by=response_time&limit=10&offset=0")
+        .with(headers: {"X-SCOUT-API" => api_key, "Accept" => "application/json", "User-Agent" => "scout-apm-mcp-rb/#{ScoutApmMcp::VERSION}"})
+        .to_return(status: 200, body: '{"results": {"endpoints": [{"name": "/slow"}], "count": 1, "total_count": 5, "has_more": true}}')
+
+      result = client.list_endpoints(app_id, from: from, to: to, sort_by: "response_time", limit: 10, offset: 0)
+      expect(result).to eq({
+        "endpoints" => [{"name" => "/slow"}],
+        "count" => 1,
+        "total_count" => 5,
+        "has_more" => true
+      })
+    end
+
+    it "validates sort_by" do
+      expect {
+        client.list_endpoints(123, sort_by: "invalid")
+      }.to raise_error(ArgumentError, /Invalid sort_by/)
+    end
   end
 
   describe "#get_endpoint_metrics" do

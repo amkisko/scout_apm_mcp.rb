@@ -1,6 +1,15 @@
 require "spec_helper"
+require "open3"
 
 RSpec.describe ScoutApmMcp::Helpers do
+  def op_status(success)
+    instance_double(Process::Status, success?: success)
+  end
+
+  def stub_op_read(reference, output)
+    allow(Open3).to receive(:capture3).with("op", "read", reference).and_return([output, "", op_status(!output.strip.empty?)])
+  end
+
   describe ".get_api_key" do
     context "when api_key is provided directly" do
       it "returns the provided API key" do
@@ -84,7 +93,7 @@ RSpec.describe ScoutApmMcp::Helpers do
 
       it "falls back to op CLI if opdotenv is not available" do
         allow(described_class).to receive(:require).with("opdotenv").and_raise(LoadError)
-        allow(described_class).to receive(:`).with(/op read "op:\/\/TestVault\/TestItem\/API_KEY"/).and_return("op-cli-key\n")
+        stub_op_read("op://TestVault/TestItem/API_KEY", "op-cli-key\n")
 
         result = described_class.get_api_key
         expect(result).to eq("op-cli-key")
@@ -92,7 +101,7 @@ RSpec.describe ScoutApmMcp::Helpers do
 
       it "falls back to environment variable if OP_ENV_ENTRY_PATH and op CLI both fail" do
         allow(described_class).to receive(:require).with("opdotenv").and_raise(LoadError)
-        allow(described_class).to receive(:`).and_return("\n")
+        allow(Open3).to receive(:capture3).and_return(["\n", "", op_status(false)])
         ENV["API_KEY"] = "fallback-key"
 
         result = described_class.get_api_key
@@ -141,7 +150,7 @@ RSpec.describe ScoutApmMcp::Helpers do
         allow(described_class).to receive(:require).with("opdotenv").and_return(true)
         allow(opdotenv_loader_class).to receive(:load).and_return(true)
         ENV["API_KEY"] = ""
-        allow(described_class).to receive(:`).with(/op read/).and_return("op-cli-key\n")
+        stub_op_read("op://TestVault/TestItem/API_KEY", "op-cli-key\n")
 
         result = described_class.get_api_key(op_vault: "TestVault", op_item: "TestItem")
         expect(result).to eq("op-cli-key")
@@ -166,7 +175,7 @@ RSpec.describe ScoutApmMcp::Helpers do
 
       it "handles opdotenv LoadError gracefully" do
         allow(described_class).to receive(:require).with("opdotenv").and_raise(LoadError)
-        allow(described_class).to receive(:`).with(/op read/).and_return("op-cli-key\n")
+        stub_op_read("op://TestVault/TestItem/API_KEY", "op-cli-key\n")
 
         result = described_class.get_api_key(op_vault: "TestVault", op_item: "TestItem")
         expect(result).to eq("op-cli-key")
@@ -182,7 +191,7 @@ RSpec.describe ScoutApmMcp::Helpers do
         stub_const("Opdotenv", opdotenv_module)
         allow(described_class).to receive(:require).with("opdotenv").and_return(true)
         allow(opdotenv_loader_class).to receive(:load).and_raise(StandardError.new("opdotenv error"))
-        allow(described_class).to receive(:`).with(/op read/).and_return("op-cli-key\n")
+        stub_op_read("op://TestVault/TestItem/API_KEY", "op-cli-key\n")
 
         result = described_class.get_api_key(op_vault: "TestVault", op_item: "TestItem")
         expect(result).to eq("op-cli-key")
@@ -202,7 +211,7 @@ RSpec.describe ScoutApmMcp::Helpers do
 
       it "loads API key from 1Password CLI" do
         allow(described_class).to receive(:require).with("opdotenv").and_raise(LoadError)
-        allow(described_class).to receive(:`).with(/op read "op:\/\/TestVault\/TestItem\/API_KEY"/).and_return("op-cli-key\n")
+        stub_op_read("op://TestVault/TestItem/API_KEY", "op-cli-key\n")
 
         result = described_class.get_api_key(op_vault: "TestVault", op_item: "TestItem")
         expect(result).to eq("op-cli-key")
@@ -210,7 +219,7 @@ RSpec.describe ScoutApmMcp::Helpers do
 
       it "handles empty string from 1Password CLI" do
         allow(described_class).to receive(:require).with("opdotenv").and_raise(LoadError)
-        allow(described_class).to receive(:`).with(/op read/).and_return("\n")
+        stub_op_read("op://TestVault/TestItem/API_KEY", "\n")
 
         expect { described_class.get_api_key(op_vault: "TestVault", op_item: "TestItem") }
           .to raise_error(/API_KEY not found/)
@@ -218,7 +227,7 @@ RSpec.describe ScoutApmMcp::Helpers do
 
       it "handles 1Password CLI errors gracefully" do
         allow(described_class).to receive(:require).with("opdotenv").and_raise(LoadError)
-        allow(described_class).to receive(:`).and_raise(StandardError.new("op CLI error"))
+        allow(Open3).to receive(:capture3).and_raise(StandardError.new("op CLI error"))
 
         expect { described_class.get_api_key(op_vault: "TestVault", op_item: "TestItem") }
           .to raise_error(/API_KEY not found/)
@@ -226,7 +235,7 @@ RSpec.describe ScoutApmMcp::Helpers do
 
       it "uses custom op_field parameter" do
         allow(described_class).to receive(:require).with("opdotenv").and_raise(LoadError)
-        allow(described_class).to receive(:`).with(/op read "op:\/\/TestVault\/TestItem\/CUSTOM_FIELD"/).and_return("custom-field-key\n")
+        stub_op_read("op://TestVault/TestItem/CUSTOM_FIELD", "custom-field-key\n")
 
         result = described_class.get_api_key(op_vault: "TestVault", op_item: "TestItem", op_field: "CUSTOM_FIELD")
         expect(result).to eq("custom-field-key")
@@ -245,7 +254,7 @@ RSpec.describe ScoutApmMcp::Helpers do
       end
 
       it "raises an error" do
-        allow(described_class).to receive(:`).and_return("")
+        allow(Open3).to receive(:capture3).and_return(["", "", op_status(false)])
         expect { described_class.get_api_key }.to raise_error(/API_KEY not found/)
       end
     end

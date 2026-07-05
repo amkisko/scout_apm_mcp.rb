@@ -28,6 +28,16 @@ module ScoutApmMcp
     # Valid job metric types (distinct from application endpoint metrics)
     VALID_JOB_METRICS = %w[throughput execution_time latency errors allocations].freeze
 
+    # Valid endpoint sort fields (paginated listing)
+    VALID_ENDPOINT_SORT_BY = %w[time_consumed response_time throughput error_rate].freeze
+
+    # Valid anomaly event state filters
+    VALID_ANOMALY_STATES = %w[open closed all].freeze
+
+    MAX_REQUEST_ATTEMPTS = 3
+    RETRY_BASE_DELAY_SECONDS = 0.5
+    RETRYABLE_HTTP_STATUS_CODES = (500..599)
+
     # @param api_key [String] ScoutAPM API key
     # @param api_base [String] API base URL (default: https://scoutapm.com/api/v0)
     # @raise [ArgumentError] if api_key is nil or empty
@@ -93,15 +103,10 @@ module ScoutApmMcp
     # @param range [String, nil] Quick time range (e.g., "30min", "1day", "3days", "7days"). If provided, calculates from/to automatically.
     # @return [Hash] Hash containing metric series data
     def get_metric(app_id, metric_type, from: nil, to: nil, range: nil)
-      if range
-        calculated = Helpers.calculate_range(range: range, to: to)
-        from = calculated[:from]
-        to = calculated[:to]
-      end
-
-      validate_metric_params(metric_type, from, to)
+      times = resolve_range_times(from: from, to: to, range: range)
+      validate_metric_params(metric_type, times[:from], times[:to])
       uri = URI("#{@api_base}/apps/#{app_id}/metrics/#{metric_type}")
-      uri.query = build_query_string(from: from, to: to)
+      uri.query = build_query_string(from: times[:from], to: times[:to])
       response = make_request(uri)
       response.dig("results", "series") || {}
     end
@@ -112,31 +117,28 @@ module ScoutApmMcp
     # @param from [String, nil] Start time in ISO 8601 format
     # @param to [String, nil] End time in ISO 8601 format
     # @param range [String, nil] Quick time range (e.g., "30min", "1day", "3days", "7days"). If provided, calculates from/to automatically.
-    # @return [Array<Hash>] Array of endpoint hashes
-    def list_endpoints(app_id, from: nil, to: nil, range: nil)
-      if from.nil? && to.nil? && range.nil?
-        range = "7days"
+    # @param sort_by [String, nil] Sort field for paginated listing (time_consumed, response_time, throughput, error_rate)
+    # @param limit [Integer, nil] Maximum endpoints per page; triggers paginated response shape when set
+    # @param offset [Integer, nil] Endpoints to skip for pagination; triggers paginated response shape when set
+    # @return [Array<Hash>, Hash] Endpoint array, or paginated hash with endpoints/count/total_count/has_more
+    def list_endpoints(app_id, from: nil, to: nil, range: nil, sort_by: nil, limit: nil, offset: nil)
+      times = resolve_listing_time_range(from: from, to: to, range: range)
+      if sort_by && !VALID_ENDPOINT_SORT_BY.include?(sort_by)
+        raise ArgumentError, "Invalid sort_by. Must be one of: #{VALID_ENDPOINT_SORT_BY.join(", ")}"
       end
 
-      if range
-        calculated = Helpers.calculate_range(range: range, to: to)
-        from = calculated[:from]
-        to = calculated[:to]
-      end
-
-      now = Time.now.utc
-      if from.nil? && to
-        calculated = Helpers.calculate_range(range: "7days", to: to)
-        from = calculated[:from]
-      elsif from && to.nil?
-        to = Helpers.format_time(now)
-      end
-
-      validate_time_range(from, to) if from && to
+      paginated = !sort_by.nil? || !limit.nil? || !offset.nil?
       uri = URI("#{@api_base}/apps/#{app_id}/endpoints")
-      uri.query = build_query_string(from: from, to: to)
+      params = {}
+      params["from"] = times[:from] if times[:from]
+      params["to"] = times[:to] if times[:to]
+      params["sort_by"] = sort_by if sort_by
+      params["limit"] = limit if limit
+      params["offset"] = offset unless offset.nil?
+      uri.query = URI.encode_www_form(params) unless params.empty?
       response = make_request(uri)
-      response["results"] || []
+      results = response["results"]
+      paginated ? (results || {}) : (results || [])
     end
 
     # Get metric data for a specific endpoint
@@ -149,16 +151,11 @@ module ScoutApmMcp
     # @param range [String, nil] Quick time range (e.g., "30min", "1day", "3days", "7days"). If provided, calculates from/to automatically.
     # @return [Array] Array of metric data points for the specified metric type
     def get_endpoint_metrics(app_id, endpoint_id, metric_type, from: nil, to: nil, range: nil)
-      if range
-        calculated = Helpers.calculate_range(range: range, to: to)
-        from = calculated[:from]
-        to = calculated[:to]
-      end
-
-      validate_metric_params(metric_type, from, to)
+      times = resolve_range_times(from: from, to: to, range: range)
+      validate_metric_params(metric_type, times[:from], times[:to])
       uri = URI(@api_base)
       uri.path = File.join(uri.path, "apps", app_id.to_s, "endpoints", endpoint_id, "metrics", metric_type)
-      uri.query = build_query_string(from: from, to: to)
+      uri.query = build_query_string(from: times[:from], to: times[:to])
       response = make_request(uri)
       series = response.dig("results", "series") || {}
       series[metric_type] || []
@@ -173,23 +170,11 @@ module ScoutApmMcp
     # @param range [String, nil] Quick time range (e.g., "30min", "1day", "3days", "7days"). If provided, calculates from/to automatically.
     # @return [Array<Hash>] Array of trace hashes
     def list_endpoint_traces(app_id, endpoint_id, from: nil, to: nil, range: nil)
-      if range
-        calculated = Helpers.calculate_range(range: range, to: to)
-        from = calculated[:from]
-        to = calculated[:to]
-      end
-
-      validate_time_range(from, to) if from && to
-      if from && to
-        from_time = Helpers.parse_time(from)
-        seven_days_ago = Time.now.utc - (7 * 24 * 60 * 60)
-        if from_time < seven_days_ago
-          raise ArgumentError, "from_time cannot be older than 7 days"
-        end
-      end
+      times = resolve_range_times(from: from, to: to, range: range)
+      validate_trace_time_range(times[:from], times[:to])
       uri = URI(@api_base)
       uri.path = File.join(uri.path, "apps", app_id.to_s, "endpoints", endpoint_id, "traces")
-      uri.query = build_query_string(from: from, to: to)
+      uri.query = build_query_string(from: times[:from], to: times[:to])
       response = make_request(uri)
       response.dig("results", "traces") || []
     end
@@ -202,27 +187,9 @@ module ScoutApmMcp
     # @param range [String, nil] Quick time range (e.g., "30min", "1day", "3days", "7days"). If provided, calculates from/to automatically.
     # @return [Array<Hash>] Array of job hashes
     def list_jobs(app_id, from: nil, to: nil, range: nil)
-      if from.nil? && to.nil? && range.nil?
-        range = "7days"
-      end
-
-      if range
-        calculated = Helpers.calculate_range(range: range, to: to)
-        from = calculated[:from]
-        to = calculated[:to]
-      end
-
-      now = Time.now.utc
-      if from.nil? && to
-        calculated = Helpers.calculate_range(range: "7days", to: to)
-        from = calculated[:from]
-      elsif from && to.nil?
-        to = Helpers.format_time(now)
-      end
-
-      validate_time_range(from, to) if from && to
+      times = resolve_listing_time_range(from: from, to: to, range: range)
       uri = URI("#{@api_base}/apps/#{app_id}/jobs")
-      uri.query = build_query_string(from: from, to: to)
+      uri.query = build_query_string(from: times[:from], to: times[:to])
       response = make_request(uri)
       response["results"] || []
     end
@@ -249,16 +216,11 @@ module ScoutApmMcp
     # @param range [String, nil] Quick time range; if provided, calculates from/to automatically.
     # @return [Array] Data points for the metric
     def get_job_metrics(app_id, job_id, metric_type, from: nil, to: nil, range: nil)
-      if range
-        calculated = Helpers.calculate_range(range: range, to: to)
-        from = calculated[:from]
-        to = calculated[:to]
-      end
-
-      validate_job_metric_params(metric_type, from, to)
+      times = resolve_range_times(from: from, to: to, range: range)
+      validate_job_metric_params(metric_type, times[:from], times[:to])
       uri = URI(@api_base)
       uri.path = File.join(uri.path, "apps", app_id.to_s, "jobs", job_id, "metrics", metric_type)
-      uri.query = build_query_string(from: from, to: to)
+      uri.query = build_query_string(from: times[:from], to: times[:to])
       response = make_request(uri)
       series = response.dig("results", "series") || {}
       series[metric_type] || []
@@ -273,23 +235,11 @@ module ScoutApmMcp
     # @param range [String, nil] Quick time range; if provided, calculates from/to automatically.
     # @return [Array<Hash>] Array of trace hashes
     def list_job_traces(app_id, job_id, from: nil, to: nil, range: nil)
-      if range
-        calculated = Helpers.calculate_range(range: range, to: to)
-        from = calculated[:from]
-        to = calculated[:to]
-      end
-
-      validate_time_range(from, to) if from && to
-      if from && to
-        from_time = Helpers.parse_time(from)
-        seven_days_ago = Time.now.utc - (7 * 24 * 60 * 60)
-        if from_time < seven_days_ago
-          raise ArgumentError, "from_time cannot be older than 7 days"
-        end
-      end
+      times = resolve_range_times(from: from, to: to, range: range)
+      validate_trace_time_range(times[:from], times[:to])
       uri = URI(@api_base)
       uri.path = File.join(uri.path, "apps", app_id.to_s, "jobs", job_id, "traces")
-      uri.query = build_query_string(from: from, to: to)
+      uri.query = build_query_string(from: times[:from], to: times[:to])
       response = make_request(uri)
       response.dig("results", "traces") || []
     end
@@ -346,6 +296,46 @@ module ScoutApmMcp
       response.dig("results", "errors") || []
     end
 
+    # List anomaly events for an application (max 100, within 30 days)
+    #
+    # @param app_id [Integer] ScoutAPM application ID
+    # @param from [String, nil] Start time in ISO 8601 format
+    # @param to [String, nil] End time in ISO 8601 format
+    # @param range [String, nil] Quick time range; if provided, calculates from/to automatically.
+    # @param state [String, nil] Filter by state (open, closed, all)
+    # @param metric [String, nil] Filter by metric (e.g., response_time, error_rate)
+    # @param endpoint [String, nil] Filter by endpoint name (exact match)
+    # @return [Array<Hash>] Array of anomaly event hashes
+    def list_anomaly_events(app_id, from: nil, to: nil, range: nil, state: nil, metric: nil, endpoint: nil)
+      times = resolve_range_times(from: from, to: to, range: range)
+      validate_time_range(times[:from], times[:to]) if times[:from] && times[:to]
+      if state && !VALID_ANOMALY_STATES.include?(state)
+        raise ArgumentError, "Invalid state. Must be one of: #{VALID_ANOMALY_STATES.join(", ")}"
+      end
+
+      uri = URI("#{@api_base}/apps/#{app_id}/anomaly_events")
+      params = {}
+      params["from"] = times[:from] if times[:from]
+      params["to"] = times[:to] if times[:to]
+      params["state"] = state if state
+      params["metric"] = metric if metric
+      params["endpoint"] = endpoint if endpoint
+      uri.query = URI.encode_www_form(params) unless params.empty?
+      response = make_request(uri)
+      response.dig("results", "anomaly_events") || []
+    end
+
+    # Get details for a specific anomaly event
+    #
+    # @param app_id [Integer] ScoutAPM application ID
+    # @param anomaly_event_id [Integer] Anomaly event identifier
+    # @return [Hash] Anomaly event details hash
+    def get_anomaly_event(app_id, anomaly_event_id)
+      uri = URI("#{@api_base}/apps/#{app_id}/anomaly_events/#{anomaly_event_id}")
+      response = make_request(uri)
+      response.dig("results", "anomaly_event") || {}
+    end
+
     # Get all insight types for an application (cached for 5 minutes)
     #
     # @param app_id [Integer] ScoutAPM application ID
@@ -365,9 +355,7 @@ module ScoutApmMcp
     # @param limit [Integer, nil] Maximum number of items (default: 20)
     # @return [Hash] Hash containing insight data
     def get_insight_by_type(app_id, insight_type, limit: nil)
-      unless VALID_INSIGHTS.include?(insight_type)
-        raise ArgumentError, "Invalid insight_type. Must be one of: #{VALID_INSIGHTS.join(", ")}"
-      end
+      validate_insight_type(insight_type)
       uri = URI("#{@api_base}/apps/#{app_id}/insights/#{insight_type}")
       uri.query = "limit=#{limit}" if limit
       response = make_request(uri)
@@ -394,7 +382,8 @@ module ScoutApmMcp
       params["pagination_direction"] = pagination_direction if pagination_direction
       params["pagination_page"] = pagination_page if pagination_page
       uri.query = URI.encode_www_form(params) unless params.empty?
-      make_request(uri)
+      response = make_request(uri)
+      response["results"] || {}
     end
 
     # Get historical insights data filtered by insight type with cursor-based pagination
@@ -409,6 +398,7 @@ module ScoutApmMcp
     # @param pagination_page [Integer, nil] Page number for pagination (default: 1)
     # @return [Hash] API response containing historical insights
     def get_insights_history_by_type(app_id, insight_type, from: nil, to: nil, limit: nil, pagination_cursor: nil, pagination_direction: nil, pagination_page: nil)
+      validate_insight_type(insight_type)
       uri = URI("#{@api_base}/apps/#{app_id}/insights/history/#{insight_type}")
       params = {}
       params["from"] = from if from
@@ -418,7 +408,8 @@ module ScoutApmMcp
       params["pagination_direction"] = pagination_direction if pagination_direction
       params["pagination_page"] = pagination_page if pagination_page
       uri.query = URI.encode_www_form(params) unless params.empty?
-      make_request(uri)
+      response = make_request(uri)
+      response["results"] || {}
     end
 
     # Fetch the ScoutAPM OpenAPI schema
@@ -493,6 +484,29 @@ module ScoutApmMcp
     end
 
     def make_request(uri)
+      attempt = 0
+
+      loop do
+        attempt += 1
+        return perform_request(uri)
+      rescue APIError => error
+        raise unless retryable_api_error?(error) && attempt < MAX_REQUEST_ATTEMPTS
+
+        sleep(retry_backoff_seconds(attempt))
+      rescue OpenSSL::SSL::SSLError => error
+        raise Error, "SSL verification failed: #{error.message}. This may be due to system certificate configuration issues."
+      rescue Timeout::Error, Errno::ECONNREFUSED, Errno::ECONNRESET, Errno::ETIMEDOUT => error
+        raise Error, "Request failed: #{error.class} - #{error.message}" if attempt >= MAX_REQUEST_ATTEMPTS
+
+        sleep(retry_backoff_seconds(attempt))
+      rescue Error
+        raise
+      rescue => error
+        raise Error, "Request failed: #{error.class} - #{error.message}"
+      end
+    end
+
+    def perform_request(uri)
       http = build_http_client(uri)
 
       request = Net::HTTP::Get.new(uri)
@@ -515,12 +529,6 @@ module ScoutApmMcp
       end
 
       response_data
-    rescue OpenSSL::SSL::SSLError => e
-      raise Error, "SSL verification failed: #{e.message}. This may be due to system certificate configuration issues."
-    rescue Error
-      raise
-    rescue => e
-      raise Error, "Request failed: #{e.class} - #{e.message}"
     end
 
     # @param response [Net::HTTPResponse] HTTP response object
@@ -556,6 +564,12 @@ module ScoutApmMcp
     # @param from [String, nil] Start time in ISO 8601 format
     # @param to [String, nil] End time in ISO 8601 format
     # @raise [ArgumentError] If validation fails
+    def validate_insight_type(insight_type)
+      return if VALID_INSIGHTS.include?(insight_type)
+
+      raise ArgumentError, "Invalid insight_type. Must be one of: #{VALID_INSIGHTS.join(", ")}"
+    end
+
     def validate_metric_params(metric_type, from, to)
       unless VALID_METRICS.include?(metric_type)
         raise ArgumentError, "Invalid metric_type. Must be one of: #{VALID_METRICS.join(", ")}"
@@ -590,6 +604,47 @@ module ScoutApmMcp
       if (to_time - from_time) > max_duration
         raise ArgumentError, "Time range cannot exceed 2 weeks"
       end
+    end
+
+    def resolve_range_times(from:, to:, range:)
+      return {from: from, to: to} unless range
+
+      Helpers.calculate_range(range: range, to: to)
+    end
+
+    def resolve_listing_time_range(from:, to:, range:, default_range: "7days")
+      range = default_range if from.nil? && to.nil? && range.nil?
+      times = resolve_range_times(from: from, to: to, range: range)
+      from = times[:from]
+      to = times[:to]
+
+      if from.nil? && to
+        from = Helpers.calculate_range(range: "7days", to: to)[:from]
+      elsif from && to.nil?
+        to = Helpers.format_time(Time.now.utc)
+      end
+
+      validate_time_range(from, to) if from && to
+      {from: from, to: to}
+    end
+
+    def validate_trace_time_range(from, to)
+      validate_time_range(from, to) if from && to
+      return unless from && to
+
+      from_time = Helpers.parse_time(from)
+      seven_days_ago = Time.now.utc - (7 * 24 * 60 * 60)
+      if from_time < seven_days_ago
+        raise ArgumentError, "from_time cannot be older than 7 days"
+      end
+    end
+
+    def retryable_api_error?(error)
+      error.is_a?(APIError) && error.status_code && RETRYABLE_HTTP_STATUS_CODES.include?(error.status_code)
+    end
+
+    def retry_backoff_seconds(attempt)
+      RETRY_BASE_DELAY_SECONDS * (2**(attempt - 1))
     end
   end
 end
