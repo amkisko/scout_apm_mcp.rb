@@ -35,6 +35,7 @@ AllCops:
     - node_modules/**/*
     - public/packs/**/*
     - public/packs-test/**/*
+    - usr/scripts/**/*
 
 # RSpec-specific configuration
 RSpec/ExampleLength:
@@ -58,7 +59,15 @@ RSpec/RepeatedExample:
   Enabled: false
 
 RSpec/DescribeClass:
-  Exclude: []
+  Exclude:
+    - spec/scout_apm_mcp/mcp_error_id_patch_spec.rb
+
+RSpec/DescribeMethod:
+  Exclude:
+    - spec/scout_apm_mcp/mcp_error_id_patch_spec.rb
+
+RSpec/MultipleExpectations:
+  Max: 3
 
 RSpec/VerifiedDoubles:
   Enabled: false
