@@ -10,56 +10,73 @@ module ScoutApmMcp
 
       def call(validate: false, compare_with_local: false)
         schema_data = get_client.fetch_openapi_schema
+        result = base_result(schema_data)
+        validate_schema_content(result, schema_data[:content]) if validate
+        compare_with_local_schema(result, schema_data[:content]) if compare_with_local
+        result[:content_preview] = schema_data[:content][0..500] if schema_data[:content]
+        result
+      end
 
-        result = {
+      private
+
+      def base_result(schema_data)
+        {
           fetched: true,
           content_type: schema_data[:content_type],
           status: schema_data[:status],
           content_length: schema_data[:content].length
         }
+      end
 
-        if validate
-          begin
-            require "yaml"
-            parsed = YAML.safe_load(schema_data[:content])
-            result[:valid_yaml] = true
-            result[:openapi_version] = parsed["openapi"] if parsed.is_a?(Hash)
-            result[:info] = parsed["info"] if parsed.is_a?(Hash) && parsed["info"]
-          rescue => e
-            result[:valid_yaml] = false
-            result[:validation_error] = e.message
-          end
+      def validate_schema_content(result, content)
+        parsed = load_yaml(content)
+        result[:valid_yaml] = true
+        assign_openapi_metadata(result, parsed)
+      rescue => error
+        result[:valid_yaml] = false
+        result[:validation_error] = error.message
+      end
+
+      def assign_openapi_metadata(result, parsed)
+        return unless parsed.is_a?(Hash)
+
+        result[:openapi_version] = parsed["openapi"]
+        result[:info] = parsed["info"] if parsed["info"]
+      end
+
+      def load_yaml(content)
+        require "yaml"
+        YAML.safe_load(content)
+      end
+
+      def compare_with_local_schema(result, remote_content)
+        local_schema_path = File.expand_path("tmp/scoutapm_openapi.yaml")
+        unless File.exist?(local_schema_path)
+          result[:local_file_exists] = false
+          return
         end
 
-        if compare_with_local
-          local_schema_path = File.expand_path("tmp/scoutapm_openapi.yaml")
-          if File.exist?(local_schema_path)
-            local_content = File.read(local_schema_path)
-            result[:local_file_exists] = true
-            result[:local_file_length] = local_content.length
-            result[:content_matches] = (schema_data[:content] == local_content)
+        local_content = File.read(local_schema_path)
+        result[:local_file_exists] = true
+        result[:local_file_length] = local_content.length
+        result[:content_matches] = (remote_content == local_content)
+        compare_schema_structure(result, remote_content, local_content) unless result[:content_matches]
+      end
 
-            unless result[:content_matches]
-              begin
-                require "yaml"
-                remote_parsed = YAML.safe_load(schema_data[:content])
-                local_parsed = YAML.safe_load(local_content)
-                result[:structure_matches] = (remote_parsed == local_parsed)
-                result[:remote_paths_count] = remote_parsed.dig("paths")&.keys&.length if remote_parsed.is_a?(Hash)
-                result[:local_paths_count] = local_parsed.dig("paths")&.keys&.length if local_parsed.is_a?(Hash)
-              rescue => e
-                result[:comparison_error] = e.message
-              end
-            end
-          else
-            result[:local_file_exists] = false
-          end
-        end
+      def compare_schema_structure(result, remote_content, local_content)
+        remote_parsed = load_yaml(remote_content)
+        local_parsed = load_yaml(local_content)
+        result[:structure_matches] = (remote_parsed == local_parsed)
+        assign_path_counts(result, remote_parsed, local_parsed)
+      rescue => error
+        result[:comparison_error] = error.message
+      end
 
-        # Include a preview of the content (first 500 chars) for inspection
-        result[:content_preview] = schema_data[:content][0..500] if schema_data[:content]
+      def assign_path_counts(result, remote_parsed, local_parsed)
+        return unless remote_parsed.is_a?(Hash)
 
-        result
+        result[:remote_paths_count] = remote_parsed.dig("paths")&.keys&.length
+        result[:local_paths_count] = local_parsed.dig("paths")&.keys&.length if local_parsed.is_a?(Hash)
       end
     end
   end

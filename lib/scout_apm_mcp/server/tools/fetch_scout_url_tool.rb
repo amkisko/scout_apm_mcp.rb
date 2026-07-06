@@ -29,128 +29,126 @@ module ScoutApmMcp
 
       def call(url:, include_endpoint: false)
         parsed = Helpers.parse_scout_url(url)
-        client = get_client
-
-        result = {
+        {
           url: url,
           parsed: parsed,
-          data: nil
+          data: fetch_url_data(parsed, include_endpoint: include_endpoint)
         }
+      end
 
+      private
+
+      def fetch_url_data(parsed, include_endpoint:)
         case parsed[:url_type]
-        when :trace
-          if parsed[:app_id] && parsed[:trace_id]
-            trace_data = client.fetch_trace(parsed[:app_id], parsed[:trace_id])
-            result[:data] = {trace: trace_data}
+        when :trace then fetch_trace_data(parsed, include_endpoint: include_endpoint)
+        when :job_trace then fetch_job_trace_data(parsed, include_endpoint: include_endpoint)
+        when :job then fetch_job_data(parsed)
+        when :endpoint then fetch_endpoint_data(parsed)
+        when :error_group then fetch_error_group_data(parsed)
+        when :insight then fetch_insight_data(parsed)
+        when :app then fetch_app_data(parsed)
+        when :unknown then raise "Unknown or unsupported ScoutAPM URL format"
+        else raise "Unable to determine URL type"
+        end
+      end
 
-            if include_endpoint && parsed[:endpoint_id]
-              begin
-                endpoints = client.list_endpoints(parsed[:app_id], range: "7days")
-                endpoint_data = endpoints.find { |ep| Helpers.get_endpoint_id(ep) == parsed[:endpoint_id] }
+      def fetch_trace_data(parsed, include_endpoint:)
+        require_ids!(parsed, :app_id, :trace_id, "trace URL")
+        data = {trace: get_client.fetch_trace(parsed[:app_id], parsed[:trace_id])}
+        attach_endpoint_context(data, parsed) if include_endpoint && parsed[:endpoint_id]
+        data
+      end
 
-                if endpoint_data
-                  result[:data][:endpoint] = endpoint_data
-                else
-                  result[:data][:endpoint_error] = "Endpoint not found in the last 7 days"
-                end
-                result[:data][:decoded_endpoint] = parsed[:decoded_endpoint]
-              rescue => e
-                result[:data][:endpoint_error] = "Failed to fetch endpoint: #{e.message}"
-                result[:data][:decoded_endpoint] = parsed[:decoded_endpoint]
-              end
-            end
-          else
-            raise "Invalid trace URL: missing app_id or trace_id"
-          end
-        when :job_trace
-          if parsed[:app_id] && parsed[:trace_id]
-            trace_data = client.fetch_trace(parsed[:app_id], parsed[:trace_id])
-            result[:data] = {trace: trace_data}
+      def fetch_job_trace_data(parsed, include_endpoint:)
+        require_ids!(parsed, :app_id, :trace_id, "job trace URL")
+        data = {trace: get_client.fetch_trace(parsed[:app_id], parsed[:trace_id])}
+        attach_job_context(data, parsed) if include_endpoint && parsed[:job_id]
+        data
+      end
 
-            if include_endpoint && parsed[:job_id]
-              begin
-                jobs = client.list_jobs(parsed[:app_id], range: "7days")
-                job_data = jobs.find { |j| Helpers.get_job_id(j) == parsed[:job_id] }
+      def fetch_job_data(parsed)
+        require_ids!(parsed, :app_id, :job_id, "job URL")
+        job_data = find_recent_job(parsed[:app_id], parsed[:job_id])
+        raise "Job not found in the last 7 days. Try using ListJobsTool with a longer time range." unless job_data
 
-                if job_data
-                  result[:data][:job] = job_data
-                else
-                  result[:data][:job_error] = "Job not found in the last 7 days"
-                end
-                result[:data][:decoded_job] = parsed[:decoded_job]
-              rescue => e
-                result[:data][:job_error] = "Failed to fetch job: #{e.message}"
-                result[:data][:decoded_job] = parsed[:decoded_job]
-              end
-            end
-          else
-            raise "Invalid job trace URL: missing app_id or trace_id"
-          end
-        when :job
-          if parsed[:app_id] && parsed[:job_id]
-            jobs = client.list_jobs(parsed[:app_id], range: "7days")
-            job_data = jobs.find { |j| Helpers.get_job_id(j) == parsed[:job_id] }
+        {job: job_data, decoded_job: parsed[:decoded_job]}
+      end
 
-            if job_data
-              result[:data] = {
-                job: job_data,
-                decoded_job: parsed[:decoded_job]
-              }
-            else
-              raise "Job not found in the last 7 days. Try using ListJobsTool with a longer time range."
-            end
-          else
-            raise "Invalid job URL: missing app_id or job_id"
-          end
-        when :endpoint
-          if parsed[:app_id] && parsed[:endpoint_id]
-            endpoints = client.list_endpoints(parsed[:app_id], range: "7days")
-            endpoint_data = endpoints.find { |ep| Helpers.get_endpoint_id(ep) == parsed[:endpoint_id] }
-
-            if endpoint_data
-              result[:data] = {
-                endpoint: endpoint_data,
-                decoded_endpoint: parsed[:decoded_endpoint]
-              }
-            else
-              raise "Endpoint not found in the last 7 days. Try using ListEndpointsTool with a longer time range."
-            end
-          else
-            raise "Invalid endpoint URL: missing app_id or endpoint_id"
-          end
-        when :error_group
-          if parsed[:app_id] && parsed[:error_id]
-            error_data = client.get_error_group(parsed[:app_id], parsed[:error_id])
-            result[:data] = {error_group: error_data}
-          else
-            raise "Invalid error group URL: missing app_id or error_id"
-          end
-        when :insight
-          if parsed[:app_id]
-            if parsed[:insight_type]
-              insight_data = client.get_insight_by_type(parsed[:app_id], parsed[:insight_type])
-              result[:data] = {insight: insight_data, insight_type: parsed[:insight_type]}
-            else
-              insights_data = client.get_all_insights(parsed[:app_id])
-              result[:data] = {insights: insights_data}
-            end
-          else
-            raise "Invalid insight URL: missing app_id"
-          end
-        when :app
-          if parsed[:app_id]
-            app_data = client.get_app(parsed[:app_id])
-            result[:data] = {app: app_data}
-          else
-            raise "Invalid app URL: missing app_id"
-          end
-        when :unknown
-          raise "Unknown or unsupported ScoutAPM URL format: #{url}"
-        else
-          raise "Unable to determine URL type from: #{url}"
+      def fetch_endpoint_data(parsed)
+        require_ids!(parsed, :app_id, :endpoint_id, "endpoint URL")
+        endpoint_data = find_recent_endpoint(parsed[:app_id], parsed[:endpoint_id])
+        unless endpoint_data
+          raise "Endpoint not found in the last 7 days. Try using ListEndpointsTool with a longer time range."
         end
 
-        result
+        {endpoint: endpoint_data, decoded_endpoint: parsed[:decoded_endpoint]}
+      end
+
+      def fetch_error_group_data(parsed)
+        require_ids!(parsed, :app_id, :error_id, "error group URL")
+        {error_group: get_client.get_error_group(parsed[:app_id], parsed[:error_id])}
+      end
+
+      def fetch_insight_data(parsed)
+        raise "Invalid insight URL: missing app_id" unless parsed[:app_id]
+
+        if parsed[:insight_type]
+          {
+            insight: get_client.get_insight_by_type(parsed[:app_id], parsed[:insight_type]),
+            insight_type: parsed[:insight_type]
+          }
+        else
+          {insights: get_client.get_all_insights(parsed[:app_id])}
+        end
+      end
+
+      def fetch_app_data(parsed)
+        raise "Invalid app URL: missing app_id" unless parsed[:app_id]
+
+        {app: get_client.get_app(parsed[:app_id])}
+      end
+
+      def attach_endpoint_context(data, parsed)
+        endpoint_data = find_recent_endpoint(parsed[:app_id], parsed[:endpoint_id])
+        if endpoint_data
+          data[:endpoint] = endpoint_data
+        else
+          data[:endpoint_error] = "Endpoint not found in the last 7 days"
+        end
+        data[:decoded_endpoint] = parsed[:decoded_endpoint]
+      rescue => error
+        data[:endpoint_error] = "Failed to fetch endpoint: #{error.message}"
+        data[:decoded_endpoint] = parsed[:decoded_endpoint]
+      end
+
+      def attach_job_context(data, parsed)
+        job_data = find_recent_job(parsed[:app_id], parsed[:job_id])
+        if job_data
+          data[:job] = job_data
+        else
+          data[:job_error] = "Job not found in the last 7 days"
+        end
+        data[:decoded_job] = parsed[:decoded_job]
+      rescue => error
+        data[:job_error] = "Failed to fetch job: #{error.message}"
+        data[:decoded_job] = parsed[:decoded_job]
+      end
+
+      def find_recent_endpoint(app_id, endpoint_id)
+        endpoints = get_client.list_endpoints(app_id, range: "7days")
+        endpoints.find { |endpoint| Helpers.get_endpoint_id(endpoint) == endpoint_id }
+      end
+
+      def find_recent_job(app_id, job_id)
+        jobs = get_client.list_jobs(app_id, range: "7days")
+        jobs.find { |job| Helpers.get_job_id(job) == job_id }
+      end
+
+      def require_ids!(parsed, *keys, label)
+        missing = keys.reject { |key| parsed[key] }
+        return if missing.empty?
+
+        raise "Invalid #{label}: missing #{missing.join(" or ")}"
       end
     end
   end

@@ -49,31 +49,35 @@ module ScoutApmMcp
       @api_client ||= Client.new(api_key: Helpers.get_api_key)
     end
 
+    TOOL_CLASSES = [
+      ListAppsTool,
+      GetAppTool,
+      ListMetricsTool,
+      GetMetricTool,
+      ListEndpointsTool,
+      GetEndpointMetricsTool,
+      ListEndpointTracesTool,
+      ListJobsTool,
+      ListJobMetricsTool,
+      GetJobMetricsTool,
+      ListJobTracesTool,
+      FetchTraceTool,
+      ListErrorGroupsTool,
+      GetErrorGroupTool,
+      GetErrorGroupErrorsTool,
+      ListAnomalyEventsTool,
+      GetAnomalyEventTool,
+      GetAllInsightsTool,
+      GetInsightByTypeTool,
+      GetInsightsHistoryTool,
+      GetInsightsHistoryByTypeTool,
+      ParseScoutURLTool,
+      FetchScoutURLTool,
+      FetchOpenAPISchemaTool
+    ].freeze
+
     def self.register_tools(server)
-      server.register_tool(ListAppsTool)
-      server.register_tool(GetAppTool)
-      server.register_tool(ListMetricsTool)
-      server.register_tool(GetMetricTool)
-      server.register_tool(ListEndpointsTool)
-      server.register_tool(GetEndpointMetricsTool)
-      server.register_tool(ListEndpointTracesTool)
-      server.register_tool(ListJobsTool)
-      server.register_tool(ListJobMetricsTool)
-      server.register_tool(GetJobMetricsTool)
-      server.register_tool(ListJobTracesTool)
-      server.register_tool(FetchTraceTool)
-      server.register_tool(ListErrorGroupsTool)
-      server.register_tool(GetErrorGroupTool)
-      server.register_tool(GetErrorGroupErrorsTool)
-      server.register_tool(ListAnomalyEventsTool)
-      server.register_tool(GetAnomalyEventTool)
-      server.register_tool(GetAllInsightsTool)
-      server.register_tool(GetInsightByTypeTool)
-      server.register_tool(GetInsightsHistoryTool)
-      server.register_tool(GetInsightsHistoryByTypeTool)
-      server.register_tool(ParseScoutURLTool)
-      server.register_tool(FetchScoutURLTool)
-      server.register_tool(FetchOpenAPISchemaTool)
+      TOOL_CLASSES.each { |tool_class| server.register_tool(tool_class) }
     end
   end
 end
