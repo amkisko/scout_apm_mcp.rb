@@ -2,16 +2,17 @@ PATH
   remote: .
   specs:
     scout_apm_mcp (0.2.0)
+      addressable (>= 2.9.0)
       base64 (~> 0.3)
       fast-mcp (>= 0.1, < 2.0)
-      opdotenv (~> 1.0)
-      rack (>= 2.2, < 4.0)
+      opdotenv (>= 1.0.5, < 2.0)
+      rack (>= 3.2.6, < 4.0)
 
 GEM
   remote: https://rubygems.org/
   specs:
-    addressable (2.8.7)
-      public_suffix (>= 2.0.2, < 7.0)
+    addressable (2.9.0)
+      public_suffix (>= 2.0.2, < 8.0)
     appraisal (2.5.0)
       bundler
       rake
@@ -78,7 +79,7 @@ GEM
       racc
     polyrun (1.5.0)
     prism (1.6.0)
-    public_suffix (6.0.2)
+    public_suffix (7.0.5)
     racc (1.8.1)
     rack (3.2.6)
     rainbow (3.1.1)
