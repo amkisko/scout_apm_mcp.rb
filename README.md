@@ -4,6 +4,10 @@
 
 Ruby gem providing ScoutAPM API client and MCP (Model Context Protocol) server tools for fetching traces, endpoints, metrics, errors, and insights. Integrates with MCP-compatible clients like Cursor IDE, Claude Desktop, and other MCP-enabled tools.
 
+## Status
+
+This project is in **low-priority support / maintenance mode**. Prefer [scout-cli](https://github.com/amkisko/scout-cli.rs) for new ScoutAPM CLI and automation work. Existing installs keep working; expect security and critical fixes only, not new features.
+
 ## Requirements
 
 - **Ruby 3.1 or higher** (Ruby 3.0 and earlier are not supported)
