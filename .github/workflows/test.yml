@@ -17,8 +17,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - gemfile: ruby31
-            ruby_version: "3.1"
           - gemfile: ruby34
             ruby_version: "3.4"
           - gemfile: ruby40

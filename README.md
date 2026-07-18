@@ -1,6 +1,6 @@
 # scout_apm_mcp
 
-[![Gem Version](https://badge.fury.io/rb/scout_apm_mcp.svg?v=0.2.0)](https://badge.fury.io/rb/scout_apm_mcp) [![Test Status](https://github.com/amkisko/scout_apm_mcp.rb/actions/workflows/test.yml/badge.svg)](https://github.com/amkisko/scout_apm_mcp.rb/actions/workflows/test.yml) [![codecov](https://codecov.io/gh/amkisko/scout_apm_mcp.rb/graph/badge.svg?token=HVWDDNLEO5)](https://codecov.io/gh/amkisko/scout_apm_mcp.rb)
+[![Gem Version](https://badge.fury.io/rb/scout_apm_mcp.svg?v=0.2.0)](https://badge.fury.io/rb/scout_apm_mcp) [![Test Status](https://github.com/amkisko/scout_apm_mcp.rb/actions/workflows/test.yml/badge.svg)](https://github.com/amkisko/scout_apm_mcp.rb/actions/workflows/test.yml) [![codecov](https://codecov.io/gh/amkisko/scout_apm_mcp.rb/graph/badge.svg?token=HVWDDNLEO5)](https://app.codecov.io/github/amkisko/scout_apm_mcp.rb)
 
 Ruby gem providing ScoutAPM API client and MCP (Model Context Protocol) server tools for fetching traces, endpoints, metrics, errors, and insights. Integrates with MCP-compatible clients like Cursor IDE, Claude Desktop, and other MCP-enabled tools.
 
@@ -367,6 +367,19 @@ For more information, see [CONTRIBUTING.md](CONTRIBUTING.md).
 ## Security
 
 If you discover a security vulnerability, please report it responsibly. See [SECURITY.md](SECURITY.md) for details.
+
+## Links
+
+- [GitHub](https://github.com/amkisko/scout_apm_mcp.rb)
+- [GitLab](https://gitlab.com/amkisko/scout_apm_mcp.rb)
+- [RubyGems](https://rubygems.org/gems/scout_apm_mcp)
+- [Versions Atom](https://rubygems.org/gems/scout_apm_mcp/versions.atom) (feed id `9961092325860`)
+- [libraries.io](https://libraries.io/rubygems/scout_apm_mcp)
+- [Deps.dev](https://deps.dev/rubygems/scout_apm_mcp)
+- [SonarCloud](https://sonarcloud.io/project/overview?id=amkisko_scout_apm_mcp.rb)
+- [Snyk](https://snyk.io/test/github/amkisko/scout_apm_mcp.rb)
+- [Codecov](https://app.codecov.io/github/amkisko/scout_apm_mcp.rb)
+- [OpenSSF Scorecard](https://scorecard.dev/viewer/?uri=github.com/amkisko/scout_apm_mcp.rb)
 
 ## License
 

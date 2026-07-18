@@ -103,7 +103,11 @@ RSpec.describe ScoutApmMcp::Server, "#handle_request" do
 
     res = call_openapi(compare_with_local: true)
     text = res.dig("result", "content", 0, "text")
-    expect(text).to match(/content_matches:\s*true/)
+    # Matching content skips structure diff; tool text is Hash#inspect (format varies by Ruby).
+    aggregate_failures do
+      expect(text).to match(/content_matches(?:=>|:)\s*true/)
+      expect(text).not_to include("structure_matches")
+    end
   end
 
   it "captures comparison_error when YAML parsing fails during diff" do
