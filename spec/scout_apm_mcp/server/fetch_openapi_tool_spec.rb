@@ -103,9 +103,9 @@ RSpec.describe ScoutApmMcp::Server, "#handle_request" do
 
     res = call_openapi(compare_with_local: true)
     text = res.dig("result", "content", 0, "text")
-    # Matching content skips structure diff; tool text is Hash#inspect (format varies by Ruby).
+    # Matching content skips structure diff; Hash#inspect format varies by Ruby.
     aggregate_failures do
-      expect(text).to match(/content_matches(?:=>|:)\s*true/)
+      expect(text).to match(/content_matches(=?>|:)\s*true/)
       expect(text).not_to include("structure_matches")
     end
   end
