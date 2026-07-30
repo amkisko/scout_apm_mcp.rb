@@ -1,19 +1,28 @@
 prayfile "1"
 
-source "amkisko", git: "https://github.com/amkisko/prayers", distribution: "prayers"
-
-target :agents do
-  output "AGENTS.md"
-  folder ".agents/skills"
+pray do
+  support_email "contact@kiskolabs.com"
+  security_email "security@kiskolabs.com"
 end
 
-agent "amkisko/getting-started", "~> 1.0", source: "amkisko", exports: ["getting-started"]
-agent "amkisko/working-rules", "~> 2.0", source: "amkisko", exports: ["working-rules"]
-agent "amkisko/minimal-implementation", "~> 1.0", source: "amkisko", exports: ["minimal-implementation"]
-agent "amkisko/finite-state-machines", "~> 1.0", source: "amkisko", exports: ["finite-state-machines"]
-agent "amkisko/branch-naming", "~> 1.0", source: "amkisko", exports: ["branch-naming"]
-agent "amkisko/changelog-update", "~> 2.0", source: "amkisko", exports: ["skill"]
-agent "amkisko/engineering-audit", "~> 2.0", source: "amkisko", exports: ["skill"]
-agent "amkisko/writing-prose", "~> 2.0", source: "amkisko", exports: ["writing-prose"]
+source "amkisko", git: "https://github.com/amkisko/prayers", distribution: "prayers"
 
-render mode: :managed, conflict: :fail, churn: :minimal
+compose "AGENTS.md" do
+  pray ".agents/project.md"
+  pray "amkisko/getting-started", "~> 1.0"
+  pray "amkisko/working-rules", "~> 2.0"
+  pray "amkisko/minimal-implementation", "~> 1.0"
+  pray "amkisko/finite-state-machines", "~> 1.0"
+  pray "amkisko/branch-naming", "~> 1.0"
+  pray "amkisko/writing-prose", "~> 2.0"
+end
+
+tree ".agents/skills" do
+  pray "amkisko/changelog-update", "~> 2.0"
+  pray "amkisko/engineering-audit", "~> 2.0"
+end
+
+pray "amkisko/community-security", "~> 1.1", file: "SECURITY.md"
+pray "amkisko/community-code-of-conduct", "~> 1.1", file: "CODE_OF_CONDUCT.md"
+pray "amkisko/community-governance", "~> 1.0", file: "GOVERNANCE.md"
+pray "amkisko/community-contributing", "~> 1.0", file: "CONTRIBUTING.md"

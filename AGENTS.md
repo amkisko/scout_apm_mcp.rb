@@ -7,7 +7,7 @@ To change shared guidance, update `Prayfile` and run `pray install`.
 
 ## Shared instructions
 
-<!-- pray:5f23b29e -->
+<!-- pray:aa6c8f33 -->
 ## Shared prayers
 
 This project uses [pray](https://github.com/kiskolabs/pray) to install and lock shared inference input from the amkisko prayers distribution.
@@ -38,9 +38,9 @@ pray apply
 ```
 
 Distribution source for amkisko-wide packages: [amkisko/prayers](https://github.com/amkisko/prayers).
-<!-- pray:5f23b29e -->
+<!-- pray:aa6c8f33 -->
 
-<!-- pray:5ef025d3 -->
+<!-- pray:9068e4a2 -->
 - when fixing or refactoring code, add or update tests first to expose the current bug/regression path (or missing contract), then implement the fix, then run focused and broader checks, and do not ship behavior changes without proving before/after via specs;
 - test only executable logic and user-facing behavior; tests should affect coverage metrics;
 - avoid tests that only assert implementation details; avoid file/page content/ordering/regex assertions; avoid duplicating tests;
@@ -55,9 +55,9 @@ Distribution source for amkisko-wide packages: [amkisko/prayers](https://github.
 - when documenting ideas, issues, user requests, new features, bugfixes, chores, etc., use `usr/docs/issues/#{date +"%Y%m%d%H%M%S"}_<title>.md`;
 - validation output must list exact commands run and observed results, and never claim tests pass unless they were executed and passed;
 - ignore style-only dust unless it harms correctness, operability, maintainability, or auditability under realistic load.
-<!-- pray:5ef025d3 -->
+<!-- pray:9068e4a2 -->
 
-<!-- pray:b2a3d4d7 -->
+<!-- pray:bf7304a6 -->
 ## Minimal implementation
 
 Efficient means the smallest correct change, not careless or under-tested.
@@ -86,16 +86,16 @@ Not optional even when minimizing scope:
 - calibration against real hardware and production drift when the platform ideal is not the spec;
 - anything explicitly requested in the task or ticket;
 - tests for non-trivial behavior per @spec/README.md and the testing bullets above; trivial one-liners need no new spec.
-<!-- pray:b2a3d4d7 -->
+<!-- pray:bf7304a6 -->
 
-<!-- pray:2b9051df -->
+<!-- pray:120c3507 -->
 ## Finite state machines
 
 - model lifecycles with explicit finite state machines when status, allowed transitions, and side effects matter; prefer named states and guarded transitions over scattered conditionals and implicit enums alone;
 - finite state machines are not only for workflow logic: they can compactly represent ordered sets or maps of strings supporting fast prefix, suffix, and fuzzy search; consider tries and automata when matching catalogs, codes, routes, or searchable vocabularies at scale.
-<!-- pray:2b9051df -->
+<!-- pray:120c3507 -->
 
-<!-- pray:7317586a -->
+<!-- pray:26f3566a -->
 ## Branch naming
 
 Use kebab-case after the prefix.
@@ -115,11 +115,11 @@ Examples:
 - `trunk/2026-august-pack`
 - `plan/auth-redesign-notes`
 - `plan/2026-q2-roadmap`
-<!-- pray:7317586a -->
+<!-- pray:26f3566a -->
 
-<!-- pray:c7597e52 -->
+<!-- pray:ca94e22d -->
 ## Writing and changelog prose checks
 
 Read once for marketing odor, once for negation-led sentences, once for stray em dashes, and once for paragraphs that break on clause instead of on scene; keep live notes and metadata honest and plain.
 - repo trace under usr/docs/issues, usr/docs/tasks, and usr/docs/changelogs: plain prose readable without a rendered preview—no markdown tables, bold, italic, or other styling; prioritize factual accuracy over presentation.
-<!-- pray:c7597e52 -->
+<!-- pray:ca94e22d -->
